@@ -19,66 +19,126 @@
                 <h2>WhatsApp Web Clone</h2>
             </div>
             
-            <!-- Login Form -->
-            <div id="login-form" class="auth-form-container active">
-                <h3>Log in to use WhatsApp</h3>
-                <form id="form-login">
+            <!-- Email Form -->
+            <div id="email-form-container" class="auth-form-container active">
+                <h3>Log in or Register with Email</h3>
+                <form id="form-email">
                     <div class="form-group">
-                        <label for="login-fullname">Full Name</label>
-                        <input type="text" id="login-fullname" required placeholder="Enter your full name">
+                        <label for="login-email">Email Address</label>
+                        <input type="email" id="login-email" required placeholder="name@example.com">
+                        <span class="help-text" style="font-size: 11px; color: var(--wa-text-light); margin-top: 4px; display: block;">We will send a passwordless login link to your inbox.</span>
                     </div>
-                    <div class="form-group">
-                        <label for="login-password">Password</label>
-                        <input type="password" id="login-password" required placeholder="Enter your password">
-                    </div>
-                    <div id="login-error" class="error-message"></div>
-                    <button type="submit" class="btn-primary" id="btn-login">Log In</button>
+                    <div id="email-error" class="error-message"></div>
+                    <button type="submit" class="btn-primary" id="btn-send-link">Send Sign-In Link</button>
                 </form>
-                <p class="auth-switch">Don't have an account? <span onclick="switchTab('register')">Register here</span></p>
+                <p class="auth-switch">Are you an Admin? <span onclick="switchTab('admin')">Admin Portal</span></p>
             </div>
 
-            <!-- Register Form -->
-            <div id="register-form" class="auth-form-container">
-                <h3>Create an account</h3>
-                <form id="form-register">
-                    <div class="form-group">
-                        <label for="reg-fullname">Full Name</label>
-                        <input type="text" id="reg-fullname" required placeholder="e.g. John Doe">
+            <!-- Link Sent Notification -->
+            <div id="link-sent-container" class="auth-form-container">
+                <div style="text-align: center; padding: 10px 0;">
+                    <svg viewBox="0 0 24 24" width="48" height="48" stroke="var(--wa-green-light)" stroke-width="2" fill="none" style="margin-bottom: 15px;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                    <h3>Check your Email</h3>
+                    <p style="font-size: 14px; color: var(--wa-text-light); line-height: 1.5; margin-bottom: 20px;">
+                        A sign-in link has been sent to <br><strong id="display-email-addr"></strong>.<br>
+                        Click the link in your email to log in automatically.
+                    </p>
+                    <button class="btn-secondary" onclick="switchTab('email')" style="border-radius: 20px; font-size: 13px; padding: 8px 20px;">Back</button>
+                </div>
+            </div>
+
+            <!-- Profile Setup Form -->
+            <div id="profile-setup-container" class="auth-form-container">
+                <h3>Create your Account Profile</h3>
+                <form id="form-profile-setup">
+                    <div class="profile-pic-setup" style="display: flex; flex-direction: column; align-items: center; margin-bottom: 20px;">
+                        <div class="avatar-preview-container" style="position: relative; width: 90px; height: 90px; border-radius: 50%; overflow: hidden; margin-bottom: 10px; border: 2px solid var(--wa-border); background: #f0f2f5;">
+                            <img id="avatar-preview" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" style="width: 100%; height: 100%; object-fit: cover;" alt="Avatar Preview">
+                        </div>
+                        <label for="setup-profile-pic" class="btn-secondary" style="font-size: 13px; padding: 6px 12px; border-radius: 4px; border: 1px solid var(--wa-border); cursor: pointer; background: #fff; font-weight: 500;">
+                            Upload Photo
+                        </label>
+                        <input type="file" id="setup-profile-pic" accept="image/*" style="display: none;">
                     </div>
+                    
                     <div class="form-group">
-                        <label for="reg-password">Password</label>
-                        <input type="password" id="reg-password" required placeholder="Create a password">
+                        <label for="setup-fullname">Full Name</label>
+                        <input type="text" id="setup-fullname" required placeholder="e.g. John Doe">
                     </div>
+
                     <div class="form-group">
-                        <label for="reg-profile-pic">Profile Picture (Optional)</label>
-                        <input type="file" id="reg-profile-pic" accept="image/*" style="font-size: 13px; margin-top: 5px; color: var(--wa-text-light);">
+                        <label for="setup-phone">Mobile Number</label>
+                        <input type="tel" id="setup-phone" required placeholder="e.g. +919999999999">
+                        <span class="help-text" style="font-size: 11px; color: var(--wa-text-light); margin-top: 4px; display: block;">Include country code.</span>
                     </div>
-                    <div id="register-error" class="error-message"></div>
-                    <div id="register-success" class="success-message"></div>
-                    <button type="submit" class="btn-primary" id="btn-register">Register</button>
+
+                    <div id="setup-error" class="error-message"></div>
+                    <button type="submit" class="btn-primary" id="btn-complete-setup">Complete Registration</button>
                 </form>
-                <p class="auth-switch">Already have an account? <span onclick="switchTab('login')">Log in here</span></p>
+            </div>
+
+            <!-- Admin Form -->
+            <div id="admin-form-container" class="auth-form-container">
+                <h3>Admin Portal Login</h3>
+                <form id="form-admin">
+                    <div class="form-group">
+                        <label for="admin-fullname">Username</label>
+                        <input type="text" id="admin-fullname" required placeholder="Username">
+                    </div>
+                    <div class="form-group">
+                        <label for="admin-password">Password</label>
+                        <input type="password" id="admin-password" required placeholder="Password">
+                    </div>
+                    <div id="admin-error" class="error-message"></div>
+                    <button type="submit" class="btn-primary" id="btn-admin-login">Log In</button>
+                </form>
+                <p class="auth-switch">Not an Admin? <span onclick="switchTab('email')">Back to User Login</span></p>
             </div>
 
         </div>
     </div>
 
     <!-- Firebase SDK (Modular) will be loaded in auth.js -->
-    <script type="module" src="js/auth.js"></script>
+    <script type="module" src="js/auth.js?v=4"></script>
     <script>
-        function switchTab(tab) {
-            document.getElementById('login-form').classList.remove('active');
-            document.getElementById('register-form').classList.remove('active');
-            document.getElementById('login-error').innerText = '';
-            document.getElementById('register-error').innerText = '';
-            document.getElementById('register-success').innerText = '';
+        window.switchTab = function(tab) {
+            document.getElementById('email-form-container').classList.remove('active');
+            document.getElementById('link-sent-container').classList.remove('active');
+            document.getElementById('profile-setup-container').classList.remove('active');
+            document.getElementById('admin-form-container').classList.remove('active');
             
-            if (tab === 'login') {
-                document.getElementById('login-form').classList.add('active');
-            } else {
-                document.getElementById('register-form').classList.add('active');
+            document.getElementById('email-error').innerText = '';
+            document.getElementById('setup-error').innerText = '';
+            document.getElementById('admin-error').innerText = '';
+            
+            if (tab === 'email') {
+                document.getElementById('email-form-container').classList.add('active');
+            } else if (tab === 'sent') {
+                document.getElementById('link-sent-container').classList.add('active');
+            } else if (tab === 'setup') {
+                document.getElementById('profile-setup-container').classList.add('active');
+            } else if (tab === 'admin') {
+                document.getElementById('admin-form-container').classList.add('active');
             }
         }
+        
+        // Listen for avatar upload to preview immediately
+        document.addEventListener('DOMContentLoaded', () => {
+            const fileInput = document.getElementById('setup-profile-pic');
+            const previewImg = document.getElementById('avatar-preview');
+            if (fileInput && previewImg) {
+                fileInput.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            previewImg.src = event.target.result;
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
+        });
     </script>
 </body>
 </html>

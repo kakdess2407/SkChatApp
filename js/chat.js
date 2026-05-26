@@ -1,5 +1,6 @@
-import { db } from './firebase-config.js';
+import { db, auth } from './firebase-config.js';
 import { collection, query, where, onSnapshot, addDoc, serverTimestamp, orderBy, getDocs, getDoc, doc, deleteDoc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 // Check Auth
 const currentUserRaw = localStorage.getItem('currentUser');
@@ -63,6 +64,9 @@ if (btnLogout) {
                 });
             } catch(e) {}
         }
+        try {
+            await signOut(auth);
+        } catch(e) {}
         localStorage.removeItem('currentUser');
         window.location.href = 'index.html';
     });
@@ -490,4 +494,334 @@ const checkAndWipeChats = async () => {
 // Check for auto-wipe when the app opens
 if (currentUser) {
     checkAndWipeChats();
+}
+
+// Settings Modal Logic
+const modalSettings = document.getElementById('modal-settings');
+const myProfilePic = document.getElementById('my-profile-pic');
+const btnCloseSettings = document.getElementById('btn-close-settings');
+const btnCancelSettings = document.getElementById('btn-cancel-settings');
+const btnSaveSettings = document.getElementById('btn-save-settings');
+const settingsAvatarWrapper = document.getElementById('settings-avatar-wrapper');
+const settingsProfilePic = document.getElementById('settings-profile-pic');
+const settingsAvatarPreview = document.getElementById('settings-avatar-preview');
+const settingsFullname = document.getElementById('settings-fullname');
+const settingsPhoneDisplay = document.getElementById('settings-phone-display');
+const btnTriggerChangePhone = document.getElementById('btn-trigger-change-phone');
+const changePhoneContainer = document.getElementById('change-phone-container');
+const settingsMessage = document.getElementById('settings-message');
+const settingsError = document.getElementById('settings-error');
+
+// Simulated OTP state variables
+let mockOtpOld = null;
+let mockOtpNew = null;
+
+// Helper to resize avatar (same as auth.js)
+const resizeAvatar = (file) => {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 120;
+                const MAX_HEIGHT = 120;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+                } else {
+                    if (height > MAX_HEIGHT) {
+                        width *= MAX_HEIGHT / height;
+                        height = MAX_HEIGHT;
+                    }
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                resolve(canvas.toDataURL('image/jpeg', 0.85));
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+};
+
+// Open Settings
+if (myProfilePic && modalSettings) {
+    myProfilePic.addEventListener('click', () => {
+        // Reset warnings / status
+        settingsError.style.display = 'none';
+        settingsMessage.style.display = 'none';
+        changePhoneContainer.style.display = 'none';
+        document.getElementById('change-phone-step-1').style.display = 'block';
+        document.getElementById('change-phone-step-2').style.display = 'none';
+        document.getElementById('otp-old-input-group').style.display = 'none';
+        document.getElementById('otp-new-input-group').style.display = 'none';
+        btnTriggerChangePhone.innerText = 'Change';
+        
+        // Reset input values
+        document.getElementById('settings-otp-old').value = '';
+        document.getElementById('settings-otp-new').value = '';
+        document.getElementById('settings-phone-new').value = '';
+        
+        // Populate inputs
+        settingsFullname.value = currentUser.fullName || '';
+        settingsAvatarPreview.src = currentUser.profilePic || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+        settingsPhoneDisplay.innerText = currentUser.phoneNumber || 'N/A';
+        
+        // Open modal
+        modalSettings.classList.add('active');
+    });
+}
+
+// Close Settings
+const closeSettingsModal = () => {
+    if (modalSettings) {
+        modalSettings.classList.remove('active');
+    }
+};
+if (btnCloseSettings) btnCloseSettings.addEventListener('click', closeSettingsModal);
+if (btnCancelSettings) btnCancelSettings.addEventListener('click', closeSettingsModal);
+
+// Avatar Edit Trigger
+if (settingsAvatarWrapper && settingsProfilePic) {
+    settingsAvatarWrapper.addEventListener('click', () => {
+        settingsProfilePic.click();
+    });
+    
+    settingsProfilePic.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                settingsAvatarPreview.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+}
+
+// Save Settings Button
+if (btnSaveSettings) {
+    btnSaveSettings.addEventListener('click', async () => {
+        btnSaveSettings.disabled = true;
+        btnSaveSettings.innerHTML = '<span class="spinner" style="border-top-color:#00a884; width:15px; height:15px; display:inline-block; border: 2px solid rgba(255,255,255,.3); border-radius:50%; border-top-color:#fff; animation:spin 1s linear infinite;"></span> Saving...';
+        settingsError.style.display = 'none';
+        settingsMessage.style.display = 'none';
+        
+        const newName = settingsFullname.value.trim();
+        if (!newName) {
+            settingsError.innerText = "Display Name cannot be empty.";
+            settingsError.style.display = 'block';
+            btnSaveSettings.disabled = false;
+            btnSaveSettings.innerText = 'Save Settings';
+            return;
+        }
+
+        try {
+            let base64Avatar = currentUser.profilePic;
+            
+            // Check if profile picture changed
+            if (settingsProfilePic.files && settingsProfilePic.files[0]) {
+                base64Avatar = await resizeAvatar(settingsProfilePic.files[0]);
+            }
+            
+            // Update Firestore Document
+            const userRef = doc(db, "users", currentUser.docId);
+            await updateDoc(userRef, {
+                fullName: newName,
+                profilePic: base64Avatar
+            });
+            
+            // Update local storage
+            currentUser.fullName = newName;
+            currentUser.profilePic = base64Avatar;
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            
+            // Update header interface
+            if (myName) myName.innerText = newName;
+            const headerPic = document.getElementById('my-profile-pic');
+            if (headerPic) headerPic.src = base64Avatar;
+            
+            settingsMessage.innerText = "Profile updated successfully!";
+            settingsMessage.style.display = 'block';
+            
+            setTimeout(() => {
+                closeSettingsModal();
+            }, 1000);
+            
+        } catch (error) {
+            console.error("Error saving settings:", error);
+            settingsError.innerText = error.message || "Failed to save profile updates.";
+            settingsError.style.display = 'block';
+        } finally {
+            btnSaveSettings.disabled = false;
+            btnSaveSettings.innerText = 'Save Settings';
+        }
+    });
+}
+
+// Phone Number Change Container Toggle
+if (btnTriggerChangePhone && changePhoneContainer) {
+    btnTriggerChangePhone.addEventListener('click', () => {
+        if (changePhoneContainer.style.display === 'none') {
+            changePhoneContainer.style.display = 'block';
+            btnTriggerChangePhone.innerText = 'Cancel Change';
+        } else {
+            changePhoneContainer.style.display = 'none';
+            btnTriggerChangePhone.innerText = 'Change';
+        }
+    });
+}
+
+// Double-OTP Flow Logic (Simulated for free usage)
+const btnSendOtpOld = document.getElementById('btn-send-otp-old');
+const btnVerifyOtpOld = document.getElementById('btn-verify-otp-old');
+const btnSendOtpNew = document.getElementById('btn-send-otp-new');
+const btnVerifyOtpNew = document.getElementById('btn-verify-otp-new');
+
+// STEP 1: Verify Old Number
+if (btnSendOtpOld) {
+    btnSendOtpOld.addEventListener('click', () => {
+        btnSendOtpOld.disabled = true;
+        btnSendOtpOld.innerText = 'Sending OTP...';
+        settingsError.style.display = 'none';
+        settingsMessage.style.display = 'none';
+
+        setTimeout(() => {
+            const oldPhoneNumber = currentUser.phoneNumber || 'N/A';
+            
+            // Generate a random 6-digit mock OTP
+            mockOtpOld = Math.floor(100000 + Math.random() * 900000).toString();
+            
+            // Display to user
+            alert(`🔐 [SMS Simulator]\nVerification code sent to current number (${oldPhoneNumber}).\nUse code: ${mockOtpOld}`);
+            
+            document.getElementById('otp-old-input-group').style.display = 'block';
+            btnSendOtpOld.innerText = 'Resend OTP';
+            btnSendOtpOld.disabled = false;
+            settingsMessage.innerText = `OTP sent to current number (${oldPhoneNumber}).`;
+            settingsMessage.style.display = 'block';
+        }, 800);
+    });
+}
+
+if (btnVerifyOtpOld) {
+    btnVerifyOtpOld.addEventListener('click', () => {
+        const oldOtpInput = document.getElementById('settings-otp-old').value.trim();
+        if (oldOtpInput.length !== 6) {
+            settingsError.innerText = "OTP must be 6 digits.";
+            settingsError.style.display = 'block';
+            return;
+        }
+
+        btnVerifyOtpOld.disabled = true;
+        btnVerifyOtpOld.innerText = 'Verifying...';
+        settingsError.style.display = 'none';
+        settingsMessage.style.display = 'none';
+
+        setTimeout(() => {
+            if (oldOtpInput === mockOtpOld) {
+                // Show Step 2
+                document.getElementById('change-phone-step-1').style.display = 'none';
+                document.getElementById('change-phone-step-2').style.display = 'block';
+                settingsMessage.innerText = "Current number verified. Proceed with entering new number.";
+                settingsMessage.style.display = 'block';
+            } else {
+                settingsError.innerText = "Invalid OTP code. Please check the simulated pop-up code.";
+                settingsError.style.display = 'block';
+            }
+            btnVerifyOtpOld.disabled = false;
+            btnVerifyOtpOld.innerText = 'Verify Current Number';
+        }, 600);
+    });
+}
+
+// STEP 2: Verify New Number
+if (btnSendOtpNew) {
+    btnSendOtpNew.addEventListener('click', () => {
+        const newPhoneNumber = document.getElementById('settings-phone-new').value.trim();
+        if (!newPhoneNumber.startsWith('+') || newPhoneNumber.length < 10) {
+            settingsError.innerText = "Please include country code starting with + (e.g. +918888888888)";
+            settingsError.style.display = 'block';
+            return;
+        }
+
+        btnSendOtpNew.disabled = true;
+        btnSendOtpNew.innerText = 'Sending OTP...';
+        settingsError.style.display = 'none';
+        settingsMessage.style.display = 'none';
+
+        setTimeout(() => {
+            // Generate a random 6-digit mock OTP
+            mockOtpNew = Math.floor(100000 + Math.random() * 900000).toString();
+            
+            // Display to user
+            alert(`🔐 [SMS Simulator]\nVerification code sent to new number (${newPhoneNumber}).\nUse code: ${mockOtpNew}`);
+            
+            document.getElementById('otp-new-input-group').style.display = 'block';
+            btnSendOtpNew.innerText = 'Resend OTP';
+            btnSendOtpNew.disabled = false;
+            settingsMessage.innerText = `OTP sent to new number (${newPhoneNumber}).`;
+            settingsMessage.style.display = 'block';
+        }, 800);
+    });
+}
+
+if (btnVerifyOtpNew) {
+    btnVerifyOtpNew.addEventListener('click', async () => {
+        const newOtpInput = document.getElementById('settings-otp-new').value.trim();
+        const newPhoneNumber = document.getElementById('settings-phone-new').value.trim();
+        
+        if (newOtpInput.length !== 6) {
+            settingsError.innerText = "OTP must be 6 digits.";
+            settingsError.style.display = 'block';
+            return;
+        }
+
+        btnVerifyOtpNew.disabled = true;
+        btnVerifyOtpNew.innerText = 'Updating...';
+        settingsError.style.display = 'none';
+        settingsMessage.style.display = 'none';
+
+        try {
+            if (newOtpInput !== mockOtpNew) {
+                throw new Error("Invalid OTP code. Please check the simulated pop-up code.");
+            }
+
+            // Update Firestore document
+            const userRef = doc(db, "users", currentUser.docId);
+            await updateDoc(userRef, {
+                phoneNumber: newPhoneNumber
+            });
+            
+            // Update LocalStorage
+            currentUser.phoneNumber = newPhoneNumber;
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            
+            // Update Display
+            settingsPhoneDisplay.innerText = newPhoneNumber;
+            
+            // Hide container and reset button
+            changePhoneContainer.style.display = 'none';
+            btnTriggerChangePhone.innerText = 'Change';
+            
+            settingsMessage.innerText = "Phone number updated successfully!";
+            settingsMessage.style.display = 'block';
+        } catch (error) {
+            console.error("Error updating phone number:", error);
+            settingsError.innerText = error.message || "Invalid OTP. Number update failed.";
+            settingsError.style.display = 'block';
+        } finally {
+            btnVerifyOtpNew.disabled = false;
+            btnVerifyOtpNew.innerText = 'Verify & Update Phone Number';
+        }
+    });
 }
