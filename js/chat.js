@@ -38,20 +38,16 @@ if (myName && currentUser) {
     }
 }
 
-// Mobile back button support
-const isMobile = window.innerWidth <= 768;
-if (isMobile) {
-    const backBtn = document.createElement('button');
-    backBtn.innerHTML = '<svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>';
-    backBtn.style.background = 'none';
-    backBtn.style.border = 'none';
-    backBtn.style.marginRight = '10px';
-    backBtn.style.cursor = 'pointer';
-    backBtn.onclick = () => {
-        document.getElementById('chat-area').classList.remove('mobile-active');
+// Mobile back button listener
+const btnBack = document.getElementById('btn-back');
+if (btnBack) {
+    btnBack.onclick = () => {
+        const chatArea = document.getElementById('chat-area');
+        if (chatArea) {
+            chatArea.classList.remove('mobile-active');
+        }
         activeChatUserId = null;
     };
-    document.querySelector('.chat-header-info').prepend(backBtn);
 }
 
 // Logout
@@ -227,8 +223,11 @@ window.removeChat = (userId) => {
         }
         emptyState.style.display = 'flex';
         activeChat.style.display = 'none';
-        if (isMobile) {
-            document.getElementById('chat-area').classList.remove('mobile-active');
+        if (window.innerWidth <= 768) {
+            const chatArea = document.getElementById('chat-area');
+            if (chatArea) {
+                chatArea.classList.remove('mobile-active');
+            }
         }
     }
     
@@ -261,9 +260,12 @@ const selectUser = (user) => {
         activeUserPic.src = user.profilePic || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
     }
     
-    // Mobile transition
-    if (isMobile) {
-        document.getElementById('chat-area').classList.add('mobile-active');
+    // Mobile transition (evaluated dynamically)
+    if (window.innerWidth <= 768) {
+        const chatArea = document.getElementById('chat-area');
+        if (chatArea) {
+            chatArea.classList.add('mobile-active');
+        }
     }
 
     // Render users to update active class

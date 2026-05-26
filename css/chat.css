@@ -395,6 +395,8 @@
     .app-container {
         height: 100vh;
         max-width: 100%;
+        overflow: hidden;
+        position: relative;
     }
     .sidebar {
         width: 100%;
@@ -412,8 +414,9 @@
     .chat-area.mobile-active {
         transform: translateX(0);
     }
-    
-    /* Add back button for mobile in JS */
+    #btn-back {
+        display: flex !important;
+    }
 }
 
 /* Remove Chat Button in Sidebar */
