@@ -1,0 +1,277 @@
+/* css/style.css */
+:root {
+    --wa-green-light: #00a884;
+    --wa-green-dark: #008069;
+    --wa-bg-color: #e3e1db;
+    --wa-white: #ffffff;
+    --wa-text-dark: #111b21;
+    --wa-text-light: #3b4a54;
+    --wa-border: #d1d7db;
+    --wa-error: #ea0038;
+    --wa-success: #00a884;
+    --wa-chat-bg: #efeae2;
+    --wa-message-in: #ffffff;
+    --wa-message-out: #d9fdd3;
+    
+    font-family: 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--wa-bg-color);
+    color: var(--wa-text-dark);
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+
+/* Background layout for Auth */
+.app-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    background-color: #d1d7db;
+}
+
+.green-header {
+    height: 222px;
+    background-color: var(--wa-green-light);
+    width: 100%;
+}
+
+/* Auth Container */
+.auth-container {
+    width: 100%;
+    max-width: 400px;
+    padding: 20px;
+}
+
+.auth-box {
+    background-color: var(--wa-white);
+    border-radius: 8px;
+    box-shadow: 0 17px 50px 0 rgba(11,20,26,.19), 0 12px 15px 0 rgba(11,20,26,.24);
+    overflow: hidden;
+    padding: 40px 30px;
+}
+
+.auth-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.auth-header img {
+    width: 60px;
+    margin-bottom: 15px;
+}
+
+.auth-header h2 {
+    color: var(--wa-text-dark);
+    font-weight: 400;
+    font-size: 24px;
+}
+
+.auth-form-container {
+    display: none;
+}
+
+.auth-form-container.active {
+    display: block;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.auth-form-container h3 {
+    margin-bottom: 20px;
+    color: var(--wa-text-light);
+    font-size: 16px;
+    text-align: center;
+    font-weight: 400;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--wa-text-light);
+    font-size: 14px;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid var(--wa-border);
+    border-radius: 6px;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.form-group input:focus {
+    border-color: var(--wa-green-light);
+}
+
+.btn-primary {
+    width: 100%;
+    background-color: var(--wa-green-light);
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 24px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-top: 10px;
+}
+
+.btn-primary:hover {
+    background-color: var(--wa-green-dark);
+}
+
+.btn-primary:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+.auth-switch {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 14px;
+    color: var(--wa-text-light);
+}
+
+.auth-switch span {
+    color: var(--wa-green-dark);
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.auth-switch span:hover {
+    text-decoration: underline;
+}
+
+.error-message {
+    color: var(--wa-error);
+    font-size: 14px;
+    margin-top: -10px;
+    margin-bottom: 10px;
+    text-align: center;
+    min-height: 20px;
+}
+
+.success-message {
+    color: var(--wa-success);
+    font-size: 14px;
+    margin-top: -10px;
+    margin-bottom: 10px;
+    text-align: center;
+    min-height: 20px;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Common Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.85);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+}
+
+.modal-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 17px 50px 0 rgba(11,20,26,.19);
+    width: 90%;
+    max-width: 400px;
+    padding: 24px;
+    transform: scale(0.9);
+    transition: transform 0.2s;
+}
+
+.modal-overlay.active .modal-content {
+    transform: scale(1);
+}
+
+.modal-title {
+    font-size: 20px;
+    margin-bottom: 16px;
+    color: var(--wa-text-dark);
+}
+
+.modal-body {
+    margin-bottom: 24px;
+    color: var(--wa-text-light);
+    font-size: 15px;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.btn-secondary {
+    padding: 10px 24px;
+    border: 1px solid var(--wa-border);
+    background: white;
+    border-radius: 24px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.btn-danger {
+    padding: 10px 24px;
+    border: none;
+    background: var(--wa-error);
+    color: white;
+    border-radius: 24px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* Spinner */
+.spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255,255,255,.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}

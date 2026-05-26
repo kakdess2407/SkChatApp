@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Web Clone - Login</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-background">
+        <div class="green-header"></div>
+    </div>
+    
+    <div class="auth-container">
+        <div class="auth-box">
+            <div class="auth-header">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="Logo" class="auth-logo">
+                <h2>WhatsApp Web Clone</h2>
+            </div>
+            
+            <!-- Login Form -->
+            <div id="login-form" class="auth-form-container active">
+                <h3>Log in to use WhatsApp</h3>
+                <form id="form-login">
+                    <div class="form-group">
+                        <label for="login-fullname">Full Name</label>
+                        <input type="text" id="login-fullname" required placeholder="Enter your full name">
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password">Password</label>
+                        <input type="password" id="login-password" required placeholder="Enter your password">
+                    </div>
+                    <div id="login-error" class="error-message"></div>
+                    <button type="submit" class="btn-primary" id="btn-login">Log In</button>
+                </form>
+                <p class="auth-switch">Don't have an account? <span onclick="switchTab('register')">Register here</span></p>
+            </div>
+
+            <!-- Register Form -->
+            <div id="register-form" class="auth-form-container">
+                <h3>Create an account</h3>
+                <form id="form-register">
+                    <div class="form-group">
+                        <label for="reg-fullname">Full Name</label>
+                        <input type="text" id="reg-fullname" required placeholder="e.g. John Doe">
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-password">Password</label>
+                        <input type="password" id="reg-password" required placeholder="Create a password">
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-profile-pic">Profile Picture (Optional)</label>
+                        <input type="file" id="reg-profile-pic" accept="image/*" style="font-size: 13px; margin-top: 5px; color: var(--wa-text-light);">
+                    </div>
+                    <div id="register-error" class="error-message"></div>
+                    <div id="register-success" class="success-message"></div>
+                    <button type="submit" class="btn-primary" id="btn-register">Register</button>
+                </form>
+                <p class="auth-switch">Already have an account? <span onclick="switchTab('login')">Log in here</span></p>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Firebase SDK (Modular) will be loaded in auth.js -->
+    <script type="module" src="js/auth.js"></script>
+    <script>
+        function switchTab(tab) {
+            document.getElementById('login-form').classList.remove('active');
+            document.getElementById('register-form').classList.remove('active');
+            document.getElementById('login-error').innerText = '';
+            document.getElementById('register-error').innerText = '';
+            document.getElementById('register-success').innerText = '';
+            
+            if (tab === 'login') {
+                document.getElementById('login-form').classList.add('active');
+            } else {
+                document.getElementById('register-form').classList.add('active');
+            }
+        }
+    </script>
+</body>
+</html>

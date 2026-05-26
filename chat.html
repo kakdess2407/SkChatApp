@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Web Clone</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/chat.css">
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-background">
+        <div class="green-header"></div>
+    </div>
+    
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <header class="sidebar-header">
+                <div class="user-profile">
+                    <img id="my-profile-pic" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" alt="Profile" class="avatar">
+                    <span id="my-name">User Name</span>
+                </div>
+                <div class="sidebar-actions">
+                    <button id="btn-logout" title="Log out">
+                        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="icon"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                    </button>
+                </div>
+            </header>
+            
+            <div class="search-container">
+                <div class="search-box">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" class="icon"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" id="search-users" placeholder="Search or start new chat">
+                </div>
+            </div>
+
+            <div class="chat-list" id="chat-list">
+                <!-- Users will be populated here -->
+                <div class="loading-users">Loading users...</div>
+            </div>
+        </div>
+
+        <!-- Main Chat Area -->
+        <div class="chat-area" id="chat-area">
+            <!-- Empty State -->
+            <div class="empty-state" id="empty-state">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp" class="empty-state-logo">
+                <h1>WhatsApp Web Clone</h1>
+                <p>Send and receive messages without keeping your phone online.</p>
+                <p>Select a user from the sidebar to start a chat.</p>
+            </div>
+
+            <!-- Active Chat State -->
+            <div class="active-chat" id="active-chat" style="display: none;">
+                <header class="chat-header">
+                    <div class="chat-header-info">
+                        <img id="active-user-pic" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" alt="Profile" class="avatar">
+                        <div class="chat-header-text">
+                            <h2 id="active-user-name">User Name</h2>
+                            <p id="active-user-status">offline</p>
+                        </div>
+                    </div>
+                    <div class="chat-actions">
+                        <button id="btn-clear-chat" title="Clear Chat">
+                            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" class="icon"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        </button>
+                    </div>
+                </header>
+
+                <div class="chat-messages-container" id="chat-messages-container">
+                    <!-- Messages will be populated here -->
+                </div>
+
+                <div class="chat-input-container">
+                    <input type="text" id="message-input" placeholder="Type a message" autocomplete="off">
+                    <button class="btn-send" id="btn-send">
+                        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" class="icon"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- Firebase SDK will be loaded in chat.js -->
+    <script type="module" src="js/chat.js"></script>
+</body>
+</html>
