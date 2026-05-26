@@ -184,14 +184,18 @@
 }
 
 .active-chat {
-    flex: 1;
     display: flex;
     flex-direction: column;
-    height: 100%;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
 }
 
 .chat-header {
     height: 60px;
+    flex-shrink: 0;
     background-color: var(--wa-bg-color);
     display: flex;
     justify-content: space-between;
@@ -347,6 +351,7 @@
 
 .chat-input-container {
     height: 62px;
+    flex-shrink: 0;
     background-color: var(--wa-bg-color);
     display: flex;
     align-items: center;

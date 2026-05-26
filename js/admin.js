@@ -83,9 +83,11 @@ const initAdmin = () => {
 
     // Listen Chats
     onSnapshot(collection(db, "chats"), (snapshot) => {
-        statChats.innerText = snapshot.size;
+        let size = 0;
         chatsTableBody.innerHTML = '';
         snapshot.forEach((docSnap) => {
+            if (docSnap.id === "SYSTEM_WIPE_METADATA") return;
+            size++;
             const chat = { docId: docSnap.id, ...docSnap.data() };
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -98,6 +100,7 @@ const initAdmin = () => {
             `;
             chatsTableBody.appendChild(tr);
         });
+        statChats.innerText = size;
     }, (error) => {
         console.error("Firestore onSnapshot error (chats):", error);
     });

@@ -1,5 +1,5 @@
 import { db } from './firebase-config.js';
-import { collection, query, where, onSnapshot, addDoc, serverTimestamp, orderBy, getDocs, doc, deleteDoc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { collection, query, where, onSnapshot, addDoc, serverTimestamp, orderBy, getDocs, getDoc, doc, deleteDoc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 // Check Auth
 const currentUserRaw = localStorage.getItem('currentUser');
@@ -428,3 +428,66 @@ setInterval(() => {
         } catch(e) {}
     }
 }, 60000); // Every 1 min
+
+// Automatic Database Wipe every 12 hours (Serverless Client-Triggered Wiping)
+const checkAndWipeChats = async () => {
+    try {
+        const metadataRef = doc(db, "chats", "SYSTEM_WIPE_METADATA");
+        const metadataSnap = await getDoc(metadataRef);
+        const now = Date.now();
+        const TWELVE_HOURS = 12 * 60 * 60 * 1000;
+
+        let shouldWipe = false;
+
+        if (metadataSnap.exists()) {
+            const data = metadataSnap.data();
+            if (data.lastWipeTime) {
+                const lastWipeTime = data.lastWipeTime.toDate ? data.lastWipeTime.toDate().getTime() : new Date(data.lastWipeTime).getTime();
+                if (now - lastWipeTime >= TWELVE_HOURS) {
+                    shouldWipe = true;
+                }
+            } else {
+                shouldWipe = true;
+            }
+        } else {
+            // First time setup - create metadata tracker doc
+            await setDoc(metadataRef, { lastWipeTime: serverTimestamp() });
+        }
+
+        if (shouldWipe) {
+            console.log("12 hours have passed. Automatically clearing chats and messages...");
+            
+            // 1. Update lastWipeTime first to lock the operation against concurrent runs by other clients
+            await setDoc(metadataRef, { lastWipeTime: serverTimestamp() }, { merge: true });
+
+            // 2. Fetch and delete all messages
+            const messagesRef = collection(db, "messages");
+            const messagesSnap = await getDocs(messagesRef);
+            const msgDelPromises = [];
+            messagesSnap.forEach((doc) => {
+                msgDelPromises.push(deleteDoc(doc.ref));
+            });
+            await Promise.all(msgDelPromises);
+
+            // 3. Fetch and delete all chats except SYSTEM_WIPE_METADATA
+            const chatsRef = collection(db, "chats");
+            const chatsSnap = await getDocs(chatsRef);
+            const chatDelPromises = [];
+            chatsSnap.forEach((doc) => {
+                if (doc.id !== "SYSTEM_WIPE_METADATA") {
+                    chatDelPromises.push(deleteDoc(doc.ref));
+                }
+            });
+            await Promise.all(chatDelPromises);
+
+            console.log("Automatic database wipe complete. Chats and messages cleared.");
+        }
+    } catch (e) {
+        console.error("Error checking or wiping chats:", e);
+    }
+};
+
+// Check for auto-wipe when the app opens
+if (currentUser) {
+    checkAndWipeChats();
+}
