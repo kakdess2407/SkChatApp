@@ -487,3 +487,32 @@
     background-color: rgba(0, 0, 0, 0.08);
     color: var(--wa-text-dark);
 }
+
+/* Settings Modal Specific Styling */
+.settings-avatar-wrapper:hover .avatar-hover-overlay {
+    opacity: 1 !important;
+}
+
+.settings-input:focus {
+    border-color: var(--wa-green-light) !important;
+    outline: none;
+}
+
+#btn-close-settings:hover {
+    color: var(--wa-text-dark) !important;
+}
+
+.modal-overlay {
+    background-color: rgba(11, 20, 26, 0.4) !important; /* WhatsApp Web styling */
+}
+
+/* Ensure modal contents are responsive on smaller screens */
+@media (max-width: 480px) {
+    .modal-content {
+        width: 95% !important;
+        padding: 16px !important;
+    }
+    .modal-body {
+        max-height: 70vh !important;
+    }
+}
