@@ -392,8 +392,14 @@
 
 /* Responsiveness */
 @media (max-width: 768px) {
+    body {
+        height: 100dvh !important;
+        height: 100vh !important;
+        align-items: stretch !important;
+    }
     .app-container {
-        height: 100vh;
+        height: 100dvh !important;
+        height: 100vh !important;
         max-width: 100%;
         overflow: hidden;
         position: relative;

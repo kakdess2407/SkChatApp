@@ -154,3 +154,120 @@ body {
     font-size: 12px;
     border-radius: 4px;
 }
+
+/* Mobile Responsiveness for Admin Panel */
+@media (max-width: 768px) {
+    body {
+        height: 100dvh !important;
+        height: 100vh !important;
+    }
+    
+    .admin-container {
+        flex-direction: column;
+        height: 100dvh;
+        height: 100vh;
+    }
+    
+    .admin-sidebar {
+        width: 100%;
+        height: auto;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        padding: 5px 0;
+    }
+    
+    .admin-logo {
+        padding: 10px 15px;
+        justify-content: center;
+        border-bottom: none;
+        gap: 8px;
+    }
+    
+    .admin-logo h2 {
+        font-size: 16px;
+    }
+    
+    .admin-nav {
+        flex-direction: row;
+        padding: 0;
+        border-top: 1px solid rgba(255,255,255,0.05);
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    
+    .admin-nav a {
+        padding: 8px 10px;
+        font-size: 12px;
+        text-align: center;
+        flex: 1;
+        border-left: none;
+        border-bottom: 3px solid transparent;
+    }
+    
+    .admin-nav a:hover, .admin-nav a.active {
+        background-color: rgba(255,255,255,0.05);
+        border-left: none;
+        border-bottom: 3px solid var(--wa-green-light);
+    }
+    
+    .admin-logout {
+        padding: 5px 15px;
+        display: flex;
+        justify-content: center;
+    }
+    
+    .admin-logout button {
+        width: 100%;
+        max-width: 200px;
+        padding: 6px 12px;
+        font-size: 12px;
+        margin: 5px 0;
+    }
+    
+    .admin-main {
+        padding: 15px;
+        overflow-y: auto;
+        flex: 1;
+        width: 100%;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    .stat-card {
+        padding: 15px;
+    }
+    
+    .stat-card p {
+        font-size: 24px;
+    }
+    
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+    
+    .section-header h1 {
+        font-size: 18px;
+        margin: 0;
+    }
+    
+    .table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        border-radius: 6px;
+        width: 100%;
+    }
+    
+    .admin-table {
+        width: 100%;
+        min-width: 600px; /* Forces table to scroll horizontally instead of squishing */
+    }
+    
+    .admin-table th, .admin-table td {
+        padding: 10px;
+        font-size: 12px;
+    }
+}
