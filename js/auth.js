@@ -1,4 +1,4 @@
-import { db, auth } from './firebase-config.js?v=4';
+import { db, auth } from './firebase-config.js?v=5';
 import { collection, setDoc, getDoc, serverTimestamp, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
