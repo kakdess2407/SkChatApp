@@ -441,10 +441,10 @@
         display: flex !important;
     }
     
-    /* CSS Grid Layout for Active Chat on Mobile to guarantee typing box remains pinned at bottom */
+    /* Bulletproof Flexbox Column Layout for Active Chat on Mobile */
     .active-chat {
-        display: grid !important;
-        grid-template-rows: 60px 1fr 62px;
+        display: flex !important;
+        flex-direction: column !important;
         position: absolute;
         top: 0;
         bottom: 0;
@@ -454,8 +454,8 @@
     }
     
     .chat-messages-container {
+        flex: 1 !important;
         min-height: 0;
-        height: 100%;
     }
 }
 
