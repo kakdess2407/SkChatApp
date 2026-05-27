@@ -516,3 +516,260 @@
         max-height: 70vh !important;
     }
 }
+
+/* WebRTC Calling CSS styling */
+.call-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(11, 20, 26, 0.95);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.call-overlay.active {
+    display: flex;
+}
+
+.call-container {
+    width: 100%;
+    height: 100%;
+    max-width: 1200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 40px 20px;
+    position: relative;
+    box-sizing: border-box;
+}
+
+.call-info {
+    text-align: center;
+    margin-top: 40px;
+    z-index: 10;
+    transition: opacity 0.3s;
+}
+
+.call-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 3px solid var(--wa-green-light);
+    object-fit: cover;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+}
+
+.call-info h2 {
+    font-size: 26px;
+    margin: 0;
+    font-weight: 500;
+}
+
+.call-info p#call-status {
+    font-size: 16px;
+    color: #8696a0;
+    margin: 8px 0 0;
+    letter-spacing: 0.5px;
+}
+
+/* Ringing animation */
+@keyframes pulseRing {
+    0% {
+        box-shadow: 0 0 0 0 rgba(0, 168, 84, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 20px rgba(0, 168, 84, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(0, 168, 84, 0);
+    }
+}
+.call-avatar.ringing {
+    animation: pulseRing 1.5s infinite;
+}
+
+/* Video Containers */
+.video-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #000;
+    z-index: 5;
+}
+
+#remote-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+#local-video {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 150px;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 12px;
+    border: 2px solid white;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    z-index: 6;
+    background-color: #222;
+    transform: scaleX(-1); /* mirror self */
+}
+
+/* Call Controls */
+.call-controls {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 30px;
+    z-index: 10;
+}
+
+.control-btn {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: none;
+    background-color: rgba(255, 255, 255, 0.15);
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.control-btn:hover {
+    background-color: rgba(255, 255, 255, 0.25);
+    transform: scale(1.05);
+}
+
+.control-btn:active {
+    transform: scale(0.95);
+}
+
+.control-btn.muted {
+    background-color: rgba(239, 68, 68, 0.8) !important;
+}
+
+.control-btn.hangup {
+    background-color: #ea4335 !important;
+}
+.control-btn.hangup:hover {
+    background-color: #d93025 !important;
+}
+
+.icon-light {
+    color: white;
+}
+
+/* Incoming Call Container */
+.incoming-call-container {
+    background-color: #1f2c34;
+    border-radius: 16px;
+    padding: 30px;
+    width: 90%;
+    max-width: 400px;
+    text-align: center;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    color: white;
+    font-family: 'Segoe UI', sans-serif;
+    border: 1px solid #2f3e46;
+    z-index: 10002;
+}
+
+.incoming-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 2px solid var(--wa-green-light);
+    object-fit: cover;
+    margin-bottom: 15px;
+}
+
+.incoming-call-info h3 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 500;
+}
+
+.incoming-call-info p#incoming-type {
+    margin: 8px 0 0;
+    color: #8696a0;
+    font-size: 14px;
+}
+
+.incoming-actions {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 30px;
+}
+
+.incoming-actions button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 24px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    transition: transform 0.1s, opacity 0.2s;
+}
+
+.incoming-actions button:active {
+    transform: scale(0.95);
+}
+
+.btn-decline {
+    background-color: #ea4335;
+    color: white;
+}
+.btn-decline:hover {
+    opacity: 0.9;
+}
+
+.btn-accept {
+    background-color: #00a884;
+    color: white;
+}
+.btn-accept:hover {
+    opacity: 0.9;
+}
+
+.incoming-actions svg {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+}
+
+/* Responsiveness on Mobile for Calling */
+@media (max-width: 768px) {
+    #local-video {
+        width: 100px;
+        height: 140px;
+        top: 15px;
+        right: 15px;
+    }
+    .call-avatar {
+        width: 100px;
+        height: 100px;
+    }
+    .call-info h2 {
+        font-size: 22px;
+    }
+}
+

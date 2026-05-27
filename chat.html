@@ -65,6 +65,12 @@
                         </div>
                     </div>
                     <div class="chat-actions">
+                        <button id="btn-audio-call" title="Audio Call">
+                            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                        </button>
+                        <button id="btn-video-call" title="Video Call">
+                            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon"><path d="M23 7l-7 5 7 5V7z"></path><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+                        </button>
                         <button id="btn-clear-chat" title="Clear Chat">
                             <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" class="icon"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                         </button>
@@ -167,6 +173,59 @@
             <div class="modal-actions" style="border-top: 1px solid #f0f2f5; padding-top: 12px; margin-top: 10px; display: flex; justify-content: flex-end; gap: 8px;">
                 <button type="button" class="btn-secondary" id="btn-cancel-settings" style="padding: 8px 16px; border-radius: 18px; font-size: 13px;">Cancel</button>
                 <button type="button" class="btn-primary" id="btn-save-settings" style="width: auto; padding: 8px 20px; margin-top: 0; border-radius: 18px; font-size: 13px;">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Call Overlay -->
+    <div id="call-overlay" class="call-overlay">
+        <div class="call-container">
+            <div class="call-info">
+                <img id="call-avatar" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" alt="Profile" class="call-avatar">
+                <h2 id="call-name">User Name</h2>
+                <p id="call-email" style="font-size: 13px; opacity: 0.8; margin-top: 4px;"></p>
+                <p id="call-status">Calling...</p>
+            </div>
+
+            <div class="video-container" id="video-container" style="display: none;">
+                <video id="remote-video" autoplay playsinline></video>
+                <video id="local-video" autoplay playsinline muted></video>
+            </div>
+
+            <audio id="remote-audio" autoplay playsinline style="display: none;"></audio>
+
+            <div class="call-controls">
+                <button id="btn-call-toggle-mic" class="control-btn" title="Mute/Unmute Microphone">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-light"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                </button>
+                <button id="btn-call-toggle-video" class="control-btn" title="Toggle Camera" style="display: none;">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-light"><path d="M23 7l-7 5 7 5V7z"></path><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+                </button>
+                <button id="btn-call-hangup" class="control-btn hangup" title="End Call">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-light"><path d="M10.68 22.31a2.15 2.15 0 0 1-3.28 0 18.66 18.66 0 0 1-5.18-8.61 2.15 2.15 0 0 1 .43-2.1l2.53-2.54a2.15 2.15 0 0 1 3 0l2.5 2.5a2.15 2.15 0 0 1 0 3l-1.9 1.9a13.79 13.79 0 0 0 5.7 5.7l1.9-1.9a2.15 2.15 0 0 1 3 0l2.5 2.5a2.15 2.15 0 0 1 0 3l-2.54 2.53z" transform="rotate(135 12 12)"></path></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Incoming Call Overlay -->
+    <div id="incoming-call-overlay" class="call-overlay" style="display: none; z-index: 10001; background-color: rgba(11, 20, 26, 0.9);">
+        <div class="incoming-call-container">
+            <div class="incoming-call-info">
+                <img id="incoming-avatar" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" alt="Profile" class="incoming-avatar">
+                <h3 id="incoming-name">User Name</h3>
+                <p id="incoming-email" style="font-size: 13px; color: #8696a0; margin-top: 4px;"></p>
+                <p id="incoming-type">Incoming video call...</p>
+            </div>
+            <div class="incoming-actions">
+                <button id="btn-incoming-decline" class="btn-decline" title="Decline Call">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.68 22.31a2.15 2.15 0 0 1-3.28 0 18.66 18.66 0 0 1-5.18-8.61 2.15 2.15 0 0 1 .43-2.1l2.53-2.54a2.15 2.15 0 0 1 3 0l2.5 2.5a2.15 2.15 0 0 1 0 3l-1.9 1.9a13.79 13.79 0 0 0 5.7 5.7l1.9-1.9a2.15 2.15 0 0 1 3 0l2.5 2.5a2.15 2.15 0 0 1 0 3l-2.54 2.53z" transform="rotate(135 12 12)"></path></svg>
+                    Decline
+                </button>
+                <button id="btn-incoming-accept" class="btn-accept" title="Accept Call">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                    Accept
+                </button>
             </div>
         </div>
     </div>
