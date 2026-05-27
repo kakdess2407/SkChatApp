@@ -325,6 +325,52 @@ const loadMessages = () => {
 const renderMessage = (msg) => {
     const isMe = msg.senderId === currentUser.userId;
     const div = document.createElement('div');
+    
+    // Check if message is a call log
+    if (msg.callLog) {
+        const callType = msg.callLog.type; // 'audio' or 'video'
+        const callStatus = msg.callLog.status; // 'missed' or 'completed'
+        
+        let title = '';
+        let isMissed = callStatus === 'missed';
+        
+        if (isMe) {
+            title = callType === 'video' ? 'Outgoing video call' : 'Outgoing voice call';
+        } else {
+            title = isMissed 
+                ? (callType === 'video' ? 'Missed video call' : 'Missed voice call')
+                : (callType === 'video' ? 'Incoming video call' : 'Incoming voice call');
+        }
+        
+        div.className = `message message-call-log ${isMe ? 'message-out' : 'message-in'}`;
+        const iconColorClass = isMissed && !isMe ? 'missed' : 'completed';
+        
+        let iconSvg = '';
+        if (callType === 'video') {
+            iconSvg = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"></path><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>`;
+        } else {
+            iconSvg = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>`;
+        }
+        
+        let callbackBtn = '';
+        if (!isMe && isMissed) {
+            callbackBtn = `<button class="call-log-callback" onclick="startCall('${callType}')">Call Back</button>`;
+        }
+        
+        div.innerHTML = `
+            <div class="call-log-icon ${iconColorClass}">
+                ${iconSvg}
+            </div>
+            <div class="call-log-info">
+                <span class="call-log-title" style="color: ${isMissed && !isMe ? '#ea4335' : 'var(--wa-text-dark)'}">${title}</span>
+                <span class="call-log-subtitle">${formatTime(msg.timestamp)}</span>
+            </div>
+            ${callbackBtn}
+        `;
+        chatMessagesContainer.appendChild(div);
+        return;
+    }
+    
     div.className = `message ${isMe ? 'message-out' : 'message-in'}`;
     
     let contentHtml = '';
@@ -866,6 +912,39 @@ let callTimeoutTimer = null;
 let audioCtx = null;
 let ringtoneInterval = null;
 
+// Helper to log call status inside message history
+const logCallMessage = async (callerId, receiverId, callType, callStatus) => {
+    const chatId = getChatId(callerId, receiverId);
+    const text = callType === 'video' 
+        ? (callStatus === 'missed' ? 'Missed video call' : 'Video call')
+        : (callStatus === 'missed' ? 'Missed voice call' : 'Voice call');
+        
+    try {
+        await addDoc(collection(db, "messages"), {
+            chatId: chatId,
+            senderId: callerId,
+            text: text,
+            callLog: {
+                type: callType,
+                status: callStatus
+            },
+            timestamp: serverTimestamp()
+        });
+        
+        // Update chats preview
+        const chatRef = doc(db, "chats", chatId);
+        await setDoc(chatRef, {
+            lastMessage: callType === 'video'
+                ? (callStatus === 'missed' ? '📹 Missed video call' : '📹 Video call')
+                : (callStatus === 'missed' ? '📞 Missed voice call' : '📞 Voice call'),
+            lastMessageTime: serverTimestamp(),
+            participants: [callerId, receiverId]
+        }, { merge: true });
+    } catch (e) {
+        console.error("Error logging call message:", e);
+    }
+};
+
 const servers = {
     iceServers: [
         {
@@ -1068,6 +1147,7 @@ const startCall = async (type = 'video') => {
         callTimeoutTimer = setTimeout(async () => {
             if (currentCallId) {
                 await updateDoc(doc(db, "calls", currentCallId), { status: 'no-answer' });
+                await logCallMessage(currentUser.userId, receiverUser.userId, type, 'missed');
                 cleanupCall("No Answer");
             }
         }, 30000);
@@ -1303,6 +1383,11 @@ const declineIncomingCall = async () => {
     if (!currentCallId) return;
     try {
         const callRef = doc(db, "calls", currentCallId);
+        const callSnap = await getDoc(callRef);
+        if (callSnap.exists()) {
+            const callData = callSnap.data();
+            await logCallMessage(callData.callerId, currentUser.userId, callData.type, 'missed');
+        }
         await updateDoc(callRef, { status: 'rejected' });
     } catch (e) {
         console.error("Error declining call:", e);
@@ -1315,6 +1400,15 @@ const hangupCall = async () => {
     if (currentCallId) {
         try {
             const callRef = doc(db, "calls", currentCallId);
+            const callSnap = await getDoc(callRef);
+            if (callSnap.exists()) {
+                const callData = callSnap.data();
+                if (callData.status === 'connected') {
+                    await logCallMessage(callData.callerId, callData.receiverId, callData.type, 'completed');
+                } else if (callData.status === 'ringing') {
+                    await logCallMessage(callData.callerId, callData.receiverId, callData.type, 'missed');
+                }
+            }
             await updateDoc(callRef, { status: 'ended' });
         } catch (e) {
             console.error("Error setting call status to ended:", e);
@@ -1435,12 +1529,26 @@ const cleanupCall = (statusMessage = null) => {
 };
 
 // Handle tab closing
-window.addEventListener('beforeunload', () => {
+window.addEventListener('beforeunload', async () => {
     if (currentCallId) {
         const callRef = doc(db, "calls", currentCallId);
-        updateDoc(callRef, { status: 'ended' });
+        try {
+            const callSnap = await getDoc(callRef);
+            if (callSnap.exists()) {
+                const callData = callSnap.data();
+                if (callData.status === 'ringing') {
+                    await logCallMessage(callData.callerId, callData.receiverId, callData.type, 'missed');
+                } else if (callData.status === 'connected') {
+                    await logCallMessage(callData.callerId, callData.receiverId, callData.type, 'completed');
+                }
+            }
+            await updateDoc(callRef, { status: 'ended' });
+        } catch(e) {}
     }
 });
+
+// Expose call triggers globally for "Call Back" action click inside bubbles
+window.startCall = startCall;
 
 // Event Listeners for Calling
 const btnAudioCall = document.getElementById('btn-audio-call');
