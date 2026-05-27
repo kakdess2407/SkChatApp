@@ -1,5 +1,5 @@
 import { db } from './firebase-config.js';
-import { collection, getDocs, deleteDoc, doc, query, onSnapshot, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { collection, getDocs, deleteDoc, doc, query, onSnapshot, where, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 // Basic Auth check for Admin
 if (!localStorage.getItem('adminAuth') && window.location.pathname.includes('admin.html')) {
@@ -61,22 +61,47 @@ const initAdmin = () => {
     // Listen Users
     onSnapshot(collection(db, "users"), (snapshot) => {
         statUsers.innerText = snapshot.size;
+        let pendingCount = 0;
         usersTableBody.innerHTML = '';
         snapshot.forEach((docSnap) => {
             const user = { docId: docSnap.id, ...docSnap.data() };
             if (!user.fullName || user.fullName.toLowerCase() === 'admin') return; // Skip admin if in db
             
+            const isApproved = user.isApproved !== false; // If undefined or true, treat as approved
+            if (!isApproved) {
+                pendingCount++;
+            }
+            
             const tr = document.createElement('tr');
+            const approvalStatus = isApproved 
+                ? '<span style="color: var(--wa-green-light); font-weight: 600;">Approved</span>' 
+                : '<span style="color: var(--wa-error); font-weight: 600;">Pending Approval</span>';
+                
+            const approveBtn = isApproved 
+                ? `<button class="btn-secondary btn-small" onclick="toggleApproval('${user.docId}', false)">Revoke</button>`
+                : `<button class="btn-primary btn-small" style="background-color: var(--wa-green-light); margin-top: 0; width: auto; padding: 6px 12px;" onclick="toggleApproval('${user.docId}', true)">Approve</button>`;
+            
             tr.innerHTML = `
                 <td><img src="${user.profilePic || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" class="admin-avatar"></td>
-                <td>${user.fullName}</td>
-                <td><span style="color: ${user.status === 'online' ? 'var(--wa-green-light)' : 'inherit'}">${user.status}</span></td>
                 <td>
-                    <button class="btn-danger btn-small" onclick="deleteUser('${user.docId}', '${user.userId}')">Delete User</button>
+                    <div style="font-weight: 600; color: var(--wa-text-dark);">${user.fullName}</div>
+                    <div style="font-size: 12px; color: var(--wa-text-light); margin-top: 2px;">${user.email || 'No email registered'}</div>
+                </td>
+                <td>${approvalStatus}</td>
+                <td>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        ${approveBtn}
+                        <button class="btn-danger btn-small" onclick="deleteUser('${user.docId}', '${user.userId}')">Delete</button>
+                    </div>
                 </td>
             `;
             usersTableBody.appendChild(tr);
         });
+        
+        const statPending = document.getElementById('stat-pending');
+        if (statPending) {
+            statPending.innerText = pendingCount;
+        }
     }, (error) => {
         console.error("Firestore onSnapshot error (users):", error);
     });
@@ -122,6 +147,19 @@ window.deleteUser = async (docId, userId) => {
     } catch (e) {
         console.error(e);
         alert('Error deleting user.');
+    }
+};
+
+window.toggleApproval = async (docId, approveState) => {
+    try {
+        const userRef = doc(db, "users", docId);
+        await updateDoc(userRef, {
+            isApproved: approveState
+        });
+        alert(approveState ? 'User approved successfully.' : 'User approval revoked.');
+    } catch (e) {
+        console.error("Error toggling user approval:", e);
+        alert("Error updating approval status.");
     }
 };
 

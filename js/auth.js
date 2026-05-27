@@ -82,6 +82,15 @@ const handleGoogleSignIn = async (btn, errorDiv, buttonLabel) => {
             // Existing user — login directly
             const userData = userDocSnap.data();
 
+            if (userData.isApproved === false) {
+                if (errorDiv) {
+                    errorDiv.innerText = 'Your account is pending admin approval.';
+                }
+                btn.disabled = false;
+                btn.innerHTML = googleSvg + ' ' + buttonLabel;
+                return;
+            }
+
             await updateDoc(userDocRef, {
                 status: 'online',
                 lastSeen: serverTimestamp()
@@ -194,22 +203,16 @@ if (profileSetupForm) {
                 email: user.email,
                 status: 'online',
                 lastSeen: serverTimestamp(),
-                profilePic: profilePicUrl
+                profilePic: profilePicUrl,
+                isApproved: false
             };
 
             await setDoc(userDocRef, newUserData);
 
-            // Store in LocalStorage
-            localStorage.setItem('currentUser', JSON.stringify({
-                docId: user.uid,
-                userId: user.uid,
-                fullName: fullName,
-                email: user.email,
-                phoneNumber: phoneNumber,
-                profilePic: profilePicUrl
-            }));
-
-            window.location.href = 'chat.html';
+            // Switch to pending approval tab
+            if (typeof window.switchTab === 'function') {
+                window.switchTab('pending');
+            }
         } catch (error) {
             console.error("Error creating user profile:", error);
             errorDiv.innerText = error.message || 'An error occurred during profile setup.';

@@ -9,6 +9,29 @@ if (!currentUserRaw && window.location.pathname.includes('chat.html')) {
 }
 const currentUser = JSON.parse(currentUserRaw);
 
+// Real-time Admin Approval Check
+let userApprovalUnsubscribe = null;
+if (currentUser && window.location.pathname.includes('chat.html')) {
+    const userDocRef = doc(db, "users", currentUser.userId);
+    userApprovalUnsubscribe = onSnapshot(userDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+            const userData = docSnap.data();
+            if (userData.isApproved === false) {
+                if (userApprovalUnsubscribe) userApprovalUnsubscribe();
+                localStorage.removeItem('currentUser');
+                alert("Your account approval has been revoked or is pending admin review.");
+                window.location.href = 'index.html';
+            }
+        } else {
+            if (userApprovalUnsubscribe) userApprovalUnsubscribe();
+            localStorage.removeItem('currentUser');
+            window.location.href = 'index.html';
+        }
+    }, (err) => {
+        console.error("Error watching user approval status:", err);
+    });
+}
+
 // DOM Elements
 const myName = document.getElementById('my-name');
 const chatList = document.getElementById('chat-list');

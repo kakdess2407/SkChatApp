@@ -96,6 +96,23 @@
                 <p class="auth-switch">Not an Admin? <span onclick="switchTab('email')">Back to User Login</span></p>
             </div>
 
+            <!-- Pending Approval Screen -->
+            <div id="pending-container" class="auth-form-container">
+                <div style="text-align: center; padding: 10px 0;">
+                    <svg viewBox="0 0 24 24" width="60" height="60" fill="none" stroke="#FBBC05" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin: 10px auto 20px; display: block;">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    <h3 style="margin-bottom: 10px; font-weight: 500; font-size: 20px;">Account Pending Verification</h3>
+                    <p style="color: var(--wa-text-light); font-size: 14px; line-height: 1.5; margin-bottom: 25px;">
+                        Your profile has been saved successfully! Your account is now pending administrator approval. Once verified, you will be able to log in.
+                    </p>
+                    <button type="button" class="btn-primary" onclick="switchTab('login')">
+                        Back to Login
+                    </button>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -106,6 +123,7 @@
             document.getElementById('login-container').classList.remove('active');
             document.getElementById('profile-setup-container').classList.remove('active');
             document.getElementById('admin-form-container').classList.remove('active');
+            document.getElementById('pending-container').classList.remove('active');
             
             // Clear all errors
             const errorDivs = document.querySelectorAll('.error-message');
@@ -117,6 +135,8 @@
                 document.getElementById('profile-setup-container').classList.add('active');
             } else if (tab === 'admin') {
                 document.getElementById('admin-form-container').classList.add('active');
+            } else if (tab === 'pending') {
+                document.getElementById('pending-container').classList.add('active');
             }
         }
         
