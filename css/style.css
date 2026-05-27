@@ -261,6 +261,75 @@ body {
     font-weight: 500;
 }
 
+/* Register Outline Button */
+.btn-register-outline {
+    width: 100%;
+    padding: 11px 16px;
+    border: 2px solid var(--wa-green-light);
+    border-radius: 24px;
+    background: transparent;
+    color: var(--wa-green-light);
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.btn-register-outline:hover {
+    background-color: var(--wa-green-light);
+    color: white;
+}
+
+/* Google Sign-In Button */
+.btn-google {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 11px 16px;
+    border: 1px solid var(--wa-border);
+    border-radius: 24px;
+    background: var(--wa-white);
+    color: var(--wa-text-dark);
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s, box-shadow 0.2s;
+}
+
+.btn-google:hover {
+    background-color: #f8f9fa;
+    box-shadow: 0 1px 3px rgba(0,0,0,.12);
+}
+
+.btn-google:active {
+    background-color: #eee;
+}
+
+/* Auth Divider */
+.auth-divider {
+    display: flex;
+    align-items: center;
+    margin: 20px 0;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background-color: var(--wa-border);
+}
+
+.auth-divider span {
+    padding: 0 14px;
+    color: var(--wa-text-light);
+    font-size: 13px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
 /* Spinner */
 .spinner {
     display: inline-block;
