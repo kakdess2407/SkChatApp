@@ -306,7 +306,7 @@
     white-space: pre-wrap;
 }
 
-/* The magic WhatsApp spacing trick */
+/* The magic spacing trick */
 .message-in .message-text::after {
     content: " \00a0\00a0\00a0\00a0\00a0\00a0\00a0\00a0\00a0\00a0\00a0\00a0"; /* Space for just time */
 }
@@ -503,7 +503,7 @@
 }
 
 .modal-overlay {
-    background-color: rgba(11, 20, 26, 0.4) !important; /* WhatsApp Web styling */
+    background-color: rgba(11, 20, 26, 0.4) !important; /* Modal backdrop styling */
 }
 
 /* Ensure modal contents are responsive on smaller screens */
