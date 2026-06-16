@@ -1019,15 +1019,7 @@ const exitBrowserPip = async () => {
     }
 };
 
-// Auto browser PiP on tab hide
-document.addEventListener('visibilitychange', () => {
-    if (!currentCallId || !currentCallType || currentCallType !== 'video') return;
-    if (document.hidden) {
-        enterBrowserPip();
-    } else {
-        exitBrowserPip();
-    }
-});
+// Native PiP is handled by the autopictureinpicture attribute on the video tag.
 
 // Draggable PiP
 const initDraggablePip = () => {
@@ -1356,7 +1348,8 @@ const startCall = async (type = 'video') => {
 
     document.getElementById('btn-call-toggle-video').style.display = type === 'video' ? 'flex' : 'none';
     const screenShareWrapper = document.getElementById('screen-share-wrapper');
-    if (screenShareWrapper) screenShareWrapper.style.display = type === 'video' ? 'flex' : 'none';
+    const supportsDisplayMedia = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
+    if (screenShareWrapper) screenShareWrapper.style.display = (type === 'video' && supportsDisplayMedia) ? 'flex' : 'none';
     const topBar = document.getElementById('call-top-bar');
     if (topBar) topBar.style.display = type === 'video' ? 'flex' : 'none';
     isAudioMuted = false;
@@ -1587,7 +1580,8 @@ const acceptIncomingCall = async () => {
 
     document.getElementById('btn-call-toggle-video').style.display = type === 'video' ? 'flex' : 'none';
     const screenShareWrapper = document.getElementById('screen-share-wrapper');
-    if (screenShareWrapper) screenShareWrapper.style.display = type === 'video' ? 'flex' : 'none';
+    const supportsDisplayMedia = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
+    if (screenShareWrapper) screenShareWrapper.style.display = (type === 'video' && supportsDisplayMedia) ? 'flex' : 'none';
     const topBar = document.getElementById('call-top-bar');
     if (topBar) topBar.style.display = type === 'video' ? 'flex' : 'none';
     isAudioMuted = false;
