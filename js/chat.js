@@ -1,5 +1,5 @@
 import { db, auth } from './firebase-config.js?v=5';
-import { collection, query, where, onSnapshot, addDoc, serverTimestamp, orderBy, getDocs, getDoc, doc, deleteDoc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { collection, query, where, onSnapshot, addDoc, serverTimestamp, orderBy, getDocs, getDoc, doc, deleteDoc, updateDoc, setDoc, or } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 // Check Auth
@@ -66,13 +66,30 @@ if (myName && currentUser) {
 const btnBack = document.getElementById('btn-back');
 if (btnBack) {
     btnBack.onclick = () => {
-        const chatArea = document.getElementById('chat-area');
-        if (chatArea) {
-            chatArea.classList.remove('mobile-active');
-        }
-        activeChatUserId = null;
+        history.back(); // Trigger popstate
     };
 }
+
+// History API for Android Hardware Back Button
+history.replaceState({ view: 'home' }, '', '#home');
+
+window.addEventListener('popstate', (e) => {
+    // If call overlay is active, trigger PiP instead of closing Chrome
+    const callOverlay = document.getElementById('call-overlay');
+    if (callOverlay && callOverlay.classList.contains('active')) {
+        history.pushState({ view: 'call' }, '', '#call'); // Prevent closing
+        if (typeof enterInAppPip === 'function') enterInAppPip();
+        return;
+    }
+    
+    // If chat area is open on mobile, hide it instead of closing Chrome
+    const chatArea = document.getElementById('chat-area');
+    if (chatArea && chatArea.classList.contains('mobile-active')) {
+        chatArea.classList.remove('mobile-active');
+        activeChatUserId = null;
+        return;
+    }
+});
 
 // Logout
 if (btnLogout) {
@@ -300,6 +317,9 @@ const selectUser = (user) => {
     if (window.innerWidth <= 768) {
         const chatArea = document.getElementById('chat-area');
         if (chatArea) {
+            if (!chatArea.classList.contains('mobile-active')) {
+                history.pushState({ view: 'chat' }, '', '#chat');
+            }
             chatArea.classList.add('mobile-active');
         }
     }
@@ -1344,6 +1364,9 @@ const startCall = async (type = 'video') => {
     document.getElementById('call-avatar').src = receiverUser.profilePic || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
     document.getElementById('call-status').innerText = "Ringing...";
     document.getElementById('call-avatar').classList.add('ringing');
+    if (!document.getElementById('call-overlay').classList.contains('active')) {
+        history.pushState({ view: 'call' }, '', '#call');
+    }
     document.getElementById('call-overlay').classList.add('active');
 
     document.getElementById('btn-call-toggle-video').style.display = type === 'video' ? 'flex' : 'none';
@@ -1576,6 +1599,9 @@ const acceptIncomingCall = async () => {
     document.getElementById('call-avatar').src = callData.callerPic || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
     document.getElementById('call-status').innerText = "Connecting...";
     document.getElementById('call-avatar').classList.remove('ringing');
+    if (!document.getElementById('call-overlay').classList.contains('active')) {
+        history.pushState({ view: 'call' }, '', '#call');
+    }
     document.getElementById('call-overlay').classList.add('active');
 
     document.getElementById('btn-call-toggle-video').style.display = type === 'video' ? 'flex' : 'none';
@@ -1798,7 +1824,10 @@ const cleanupCall = (statusMessage = null) => {
     if (remoteAudio) remoteAudio.srcObject = null;
 
     const videoContainer = document.getElementById('video-container');
-    if (videoContainer) videoContainer.style.display = 'none';
+    if (videoContainer) {
+        videoContainer.style.display = 'none';
+        videoContainer.classList.remove('swapped');
+    }
 
     if (callUnsubscribe) {
         callUnsubscribe();
@@ -1894,7 +1923,184 @@ if (btnCallSwitchCam) btnCallSwitchCam.addEventListener('click', switchCamera);
 if (btnCallShareScreen) btnCallShareScreen.addEventListener('click', toggleScreenShare);
 if (btnPipHangup) btnPipHangup.addEventListener('click', hangupCall);
 
+// Video Swap Logic
+const localVideoEl = document.getElementById('local-video');
+const remoteVideoEl = document.getElementById('remote-video');
+const videoContainerEl = document.getElementById('video-container');
+
+if (localVideoEl && remoteVideoEl && videoContainerEl) {
+    localVideoEl.addEventListener('click', () => {
+        if (!videoContainerEl.classList.contains('swapped')) {
+            videoContainerEl.classList.add('swapped');
+        } else {
+            videoContainerEl.classList.remove('swapped');
+        }
+    });
+    
+    remoteVideoEl.addEventListener('click', () => {
+        if (videoContainerEl.classList.contains('swapped')) {
+            videoContainerEl.classList.remove('swapped');
+        }
+    });
+}
+
 // Start listening for incoming calls after initialization is complete
 if (currentUser) {
     listenForIncomingCalls();
 }
+
+// ==========================================
+// Bottom Navigation & Call History Logic
+// ==========================================
+const navTabs = document.querySelectorAll('.nav-tab');
+const sidebarChats = document.getElementById('sidebar-chats');
+const sidebarCalls = document.getElementById('sidebar-calls');
+
+if (navTabs) {
+    navTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            navTabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            
+            const target = tab.getAttribute('data-target');
+            if (target === 'sidebar-chats') {
+                if(sidebarChats) sidebarChats.style.display = 'block';
+                if(sidebarCalls) sidebarCalls.style.display = 'none';
+            } else {
+                if(sidebarChats) sidebarChats.style.display = 'none';
+                if(sidebarCalls) {
+                    sidebarCalls.style.display = 'block';
+                    fetchCallHistory();
+                }
+            }
+        });
+    });
+}
+
+let callsUnsubscribe = null;
+let isCallsEditMode = false;
+
+const fetchCallHistory = () => {
+    if (callsUnsubscribe) return; // Already listening
+    
+    const callsRef = collection(db, "calls");
+    // Require composite index? No, we can just use simple OR without orderBy, then sort in JS if needed. 
+    // Wait, OR with orderBy might require a composite index on (callerId, createdAt) and (receiverId, createdAt).
+    // Let's query and then sort in memory to avoid breaking the app with index requirements.
+    const q = query(
+        callsRef,
+        or(
+            where("callerId", "==", currentUser.userId),
+            where("receiverId", "==", currentUser.userId)
+        )
+    );
+    
+    callsUnsubscribe = onSnapshot(q, (snapshot) => {
+        const callListEl = document.getElementById('call-list');
+        callListEl.innerHTML = '';
+        
+        if (snapshot.empty) {
+            callListEl.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--wa-text-light); font-size: 14px;">No recent calls</div>';
+            return;
+        }
+        
+        const callsArray = [];
+        snapshot.forEach(doc => {
+            callsArray.push({ id: doc.id, ...doc.data() });
+        });
+        
+        // Sort descending by createdAt
+        callsArray.sort((a, b) => {
+            const timeA = a.createdAt ? (a.createdAt.toDate ? a.createdAt.toDate().getTime() : a.createdAt) : 0;
+            const timeB = b.createdAt ? (b.createdAt.toDate ? b.createdAt.toDate().getTime() : b.createdAt) : 0;
+            return timeB - timeA;
+        });
+        
+        callsArray.forEach(data => {
+            const isOutgoing = data.callerId === currentUser.userId;
+            const otherName = isOutgoing ? data.receiverName : data.callerName;
+            const otherPic = isOutgoing ? data.receiverPic : data.callerPic;
+            
+            // Format time
+            let timeStr = '';
+            if (data.createdAt) {
+                const date = data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt);
+                timeStr = date.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ', ' + 
+                          date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+            
+            // Icon logic
+            let iconClass = 'incoming';
+            let iconSvg = '';
+            if (isOutgoing) {
+                iconClass = 'outgoing';
+                iconSvg = `<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><line x1="17" y1="7" x2="7" y2="17"></line><polyline points="8 7 17 7 17 16"></polyline></svg>`;
+            } else {
+                iconClass = data.status === 'missed' || data.status === 'no-answer' ? 'missed' : 'incoming';
+                iconSvg = `<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="16 17 7 17 7 8"></polyline></svg>`;
+            }
+            
+            let statusText = isOutgoing ? 'Outgoing' : (iconClass === 'missed' ? 'Missed' : 'Incoming');
+            statusText += ` ${data.type === 'video' ? 'Video' : 'Audio'}`;
+            
+            const callItem = document.createElement('div');
+            callItem.className = 'call-log-item';
+            callItem.innerHTML = `
+                <input type="checkbox" class="call-log-checkbox" value="${data.id}">
+                <img src="${otherPic || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" class="call-log-avatar">
+                <div class="call-log-details">
+                    <h4 class="call-log-name">${otherName}</h4>
+                    <div class="call-log-sub">
+                        <span class="call-log-icon ${iconClass}">${iconSvg}</span>
+                        <span>${statusText}</span>
+                    </div>
+                </div>
+                <div class="call-log-time">${timeStr}</div>
+            `;
+            
+            callListEl.appendChild(callItem);
+        });
+    }, (err) => {
+        console.error("Error fetching calls:", err);
+    });
+};
+
+// Edit / Delete Logic
+const btnEditCalls = document.getElementById('btn-edit-calls');
+const btnDeleteCalls = document.getElementById('btn-delete-calls');
+const sidebarCallsPane = document.getElementById('sidebar-calls');
+
+if (btnEditCalls && btnDeleteCalls) {
+    btnEditCalls.addEventListener('click', () => {
+        isCallsEditMode = !isCallsEditMode;
+        if (isCallsEditMode) {
+            sidebarCallsPane.classList.add('calls-edit-mode');
+            btnEditCalls.innerText = 'Cancel';
+            btnDeleteCalls.style.display = 'block';
+        } else {
+            sidebarCallsPane.classList.remove('calls-edit-mode');
+            btnEditCalls.innerText = 'Edit';
+            btnDeleteCalls.style.display = 'none';
+            // Uncheck all
+            document.querySelectorAll('.call-log-checkbox').forEach(cb => cb.checked = false);
+        }
+    });
+    
+    btnDeleteCalls.addEventListener('click', async () => {
+        const checkedBoxes = document.querySelectorAll('.call-log-checkbox:checked');
+        if (checkedBoxes.length === 0) return;
+        
+        if (confirm(`Delete ${checkedBoxes.length} selected call log(s)?`)) {
+            for (let cb of checkedBoxes) {
+                try {
+                    await deleteDoc(doc(db, "calls", cb.value));
+                } catch(e) {
+                    console.error("Error deleting call:", e);
+                }
+            }
+            // Exit edit mode after deletion
+            btnEditCalls.click();
+        }
+    });
+}
+

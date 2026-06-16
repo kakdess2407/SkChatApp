@@ -607,12 +607,6 @@
     z-index: 5;
 }
 
-#remote-video {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
 #local-video {
     position: absolute;
     top: 20px;
@@ -626,11 +620,46 @@
     z-index: 6;
     background-color: #222;
     transform: scaleX(-1); /* mirror self */
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+#remote-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+/* Swapped state: local is fullscreen, remote is mini */
+.video-container.swapped #local-video {
+    top: 0;
+    right: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+    border: none;
+    z-index: 5;
+    box-shadow: none;
+}
+
+.video-container.swapped #remote-video {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 150px;
+    height: 200px;
+    border-radius: 12px;
+    border: 2px solid white;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    z-index: 6;
 }
 
 /* Call Controls */
 .call-controls {
     display: flex;
+    justify-content: center;
     gap: 20px;
     margin-bottom: 30px;
     z-index: 10;
@@ -992,4 +1021,138 @@
     .call-top-bar { padding: 8px 12px; }
     .call-top-btn { width: 36px; height: 36px; }
     .control-label { font-size: 10px; }
+}
+
+/* Laptop Video Zoom Fix */
+@media (min-width: 769px) {
+    #remote-video, #local-video {
+        object-fit: contain;
+        background-color: #000;
+    }
+    .video-container.swapped #local-video {
+        object-fit: contain;
+    }
+}
+
+/* Bottom Navigation Menu */
+.bottom-nav {
+    display: none;
+    flex-shrink: 0;
+    background-color: white;
+    border-top: 1px solid var(--wa-border);
+    justify-content: space-around;
+    padding: 8px 0;
+    z-index: 100;
+}
+
+@media (max-width: 768px) {
+    .bottom-nav {
+        display: flex;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 60px;
+    }
+    .sidebar {
+        padding-bottom: 60px; /* Make space for fixed bottom nav */
+    }
+}
+
+.nav-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: none;
+    border: none;
+    color: var(--wa-text-light);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    gap: 4px;
+    width: 50%;
+}
+
+.nav-tab.active {
+    color: var(--wa-green-dark);
+}
+
+.nav-tab.active svg {
+    fill: rgba(0, 168, 132, 0.1);
+}
+
+/* Call Log Item */
+.call-log-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    border-bottom: 1px solid #f0f2f5;
+    background: white;
+    transition: background-color 0.2s;
+}
+
+.call-log-item:hover {
+    background-color: #f5f6f6;
+}
+
+.call-log-avatar {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: 15px;
+}
+
+.call-log-details {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.call-log-name {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--wa-text-dark);
+    margin: 0 0 2px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.call-log-sub {
+    font-size: 13px;
+    color: var(--wa-text-light);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.call-log-icon {
+    width: 14px;
+    height: 14px;
+}
+
+.call-log-icon.missed { color: #ea4335; }
+.call-log-icon.incoming { color: #34a853; }
+.call-log-icon.outgoing { color: #34a853; }
+
+.call-log-time {
+    font-size: 12px;
+    color: var(--wa-text-light);
+    margin-left: 10px;
+    white-space: nowrap;
+}
+
+.call-log-checkbox {
+    width: 20px;
+    height: 20px;
+    margin-right: 15px;
+    accent-color: var(--wa-green-dark);
+    cursor: pointer;
+    display: none;
+}
+
+.calls-edit-mode .call-log-checkbox {
+    display: block;
 }
