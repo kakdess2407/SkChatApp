@@ -627,7 +627,8 @@
 #remote-video {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain; /* Prevents zooming/cropping on screen shares */
+    background-color: #000;
     cursor: pointer;
     transition: all 0.3s ease;
 }
@@ -1042,7 +1043,7 @@
     border-top: 1px solid var(--wa-border);
     justify-content: space-around;
     padding: 8px 0;
-    z-index: 100;
+    z-index: 10; /* Lower than chat-area so it gets covered */
 }
 
 @media (max-width: 768px) {

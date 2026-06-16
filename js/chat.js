@@ -1200,7 +1200,7 @@ const stopScreenShare = async () => {
 };
 
 // Helper to log call status inside message history
-const logCallMessage = async (callerId, receiverId, callType, callStatus) => {
+const logCallMessage = async (callerId, receiverId, callType, callStatus, callId = null) => {
     const chatId = getChatId(callerId, receiverId);
     const text = callType === 'video' 
         ? (callStatus === 'missed' ? 'Missed video call' : 'Video call')
@@ -1213,7 +1213,8 @@ const logCallMessage = async (callerId, receiverId, callType, callStatus) => {
             text: text,
             callLog: {
                 type: callType,
-                status: callStatus
+                status: callStatus,
+                callId: callId
             },
             timestamp: serverTimestamp()
         });
@@ -1447,7 +1448,7 @@ const startCall = async (type = 'video') => {
         callTimeoutTimer = setTimeout(async () => {
             if (currentCallId) {
                 await updateDoc(doc(db, "calls", currentCallId), { status: 'no-answer' });
-                await logCallMessage(currentUser.userId, receiverUser.userId, type, 'missed');
+                await logCallMessage(currentUser.userId, receiverUser.userId, type, 'missed', currentCallId);
                 cleanupCall("No Answer");
             }
         }, 30000);
@@ -1708,7 +1709,7 @@ const declineIncomingCall = async () => {
         const callSnap = await getDoc(callRef);
         if (callSnap.exists()) {
             const callData = callSnap.data();
-            await logCallMessage(callData.callerId, currentUser.userId, callData.type, 'missed');
+            await logCallMessage(callData.callerId, currentUser.userId, callData.type, 'missed', currentCallId);
         }
         await updateDoc(callRef, { status: 'rejected' });
     } catch (e) {
@@ -1726,9 +1727,9 @@ const hangupCall = async () => {
             if (callSnap.exists()) {
                 const callData = callSnap.data();
                 if (callData.status === 'connected') {
-                    await logCallMessage(callData.callerId, callData.receiverId, callData.type, 'completed');
+                    await logCallMessage(callData.callerId, callData.receiverId, callData.type, 'completed', currentCallId);
                 } else if (callData.status === 'ringing') {
-                    await logCallMessage(callData.callerId, callData.receiverId, callData.type, 'missed');
+                    await logCallMessage(callData.callerId, callData.receiverId, callData.type, 'missed', currentCallId);
                 }
             }
             await updateDoc(callRef, { status: 'ended' });
@@ -1867,9 +1868,9 @@ window.addEventListener('beforeunload', async () => {
             if (callSnap.exists()) {
                 const callData = callSnap.data();
                 if (callData.status === 'ringing') {
-                    await logCallMessage(callData.callerId, callData.receiverId, callData.type, 'missed');
+                    await logCallMessage(callData.callerId, callData.receiverId, callData.type, 'missed', currentCallId);
                 } else if (callData.status === 'connected') {
-                    await logCallMessage(callData.callerId, callData.receiverId, callData.type, 'completed');
+                    await logCallMessage(callData.callerId, callData.receiverId, callData.type, 'completed', currentCallId);
                 }
             }
             await updateDoc(callRef, { status: 'ended' });
@@ -2094,6 +2095,13 @@ if (btnEditCalls && btnDeleteCalls) {
             for (let cb of checkedBoxes) {
                 try {
                     await deleteDoc(doc(db, "calls", cb.value));
+                    
+                    // Also delete the associated system message in the chat history
+                    const msgQuery = query(collection(db, "messages"), where("callLog.callId", "==", cb.value));
+                    const msgSnap = await getDocs(msgQuery);
+                    msgSnap.forEach(async (msgDoc) => {
+                        await deleteDoc(doc(db, "messages", msgDoc.id));
+                    });
                 } catch(e) {
                     console.error("Error deleting call:", e);
                 }
