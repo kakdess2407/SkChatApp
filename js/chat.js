@@ -1859,8 +1859,17 @@ const cleanupCall = (statusMessage = null) => {
     currentCallId = null;
 };
 
-// Handle tab closing
+// Handle tab closing and presence
 window.addEventListener('beforeunload', async () => {
+    if (currentUser) {
+        try {
+            await updateDoc(doc(db, "users", currentUser.docId), {
+                status: 'offline',
+                lastSeen: serverTimestamp()
+            });
+        } catch(e) {}
+    }
+
     if (currentCallId) {
         const callRef = doc(db, "calls", currentCallId);
         try {
@@ -1875,6 +1884,23 @@ window.addEventListener('beforeunload', async () => {
             }
             await updateDoc(callRef, { status: 'ended' });
         } catch(e) {}
+    }
+});
+
+// Immediately update presence when minimizing/switching tabs on mobile
+document.addEventListener('visibilitychange', () => {
+    if (currentUser) {
+        if (document.visibilityState === 'hidden') {
+            updateDoc(doc(db, "users", currentUser.docId), {
+                status: 'offline',
+                lastSeen: serverTimestamp()
+            }).catch(e => {});
+        } else if (document.visibilityState === 'visible') {
+            updateDoc(doc(db, "users", currentUser.docId), {
+                status: 'online',
+                lastSeen: serverTimestamp()
+            }).catch(e => {});
+        }
     }
 });
 
@@ -2094,14 +2120,38 @@ if (btnEditCalls && btnDeleteCalls) {
         if (confirm(`Delete ${checkedBoxes.length} selected call log(s)?`)) {
             for (let cb of checkedBoxes) {
                 try {
+                    // Fetch call data first for fallback deletion of old logs
+                    const callSnap = await getDoc(doc(db, "calls", cb.value));
+                    let callData = null;
+                    if (callSnap.exists()) callData = callSnap.data();
+
                     await deleteDoc(doc(db, "calls", cb.value));
                     
                     // Also delete the associated system message in the chat history
                     const msgQuery = query(collection(db, "messages"), where("callLog.callId", "==", cb.value));
                     const msgSnap = await getDocs(msgQuery);
-                    msgSnap.forEach(async (msgDoc) => {
-                        await deleteDoc(doc(db, "messages", msgDoc.id));
-                    });
+                    
+                    if (!msgSnap.empty) {
+                        msgSnap.forEach(async (msgDoc) => {
+                            await deleteDoc(doc(db, "messages", msgDoc.id));
+                        });
+                    } else if (callData) {
+                        // Fallback for older calls without callId
+                        const chatId = getChatId(callData.callerId, callData.receiverId);
+                        const chatMsgsQuery = query(collection(db, "messages"), where("chatId", "==", chatId));
+                        const chatMsgsSnap = await getDocs(chatMsgsQuery);
+                        chatMsgsSnap.forEach(async (msgDoc) => {
+                            const mData = msgDoc.data();
+                            if (mData.callLog && mData.callLog.type === callData.type) {
+                                const mTime = mData.timestamp ? mData.timestamp.toMillis() : 0;
+                                const cTime = callData.createdAt ? callData.createdAt.toMillis() : 0;
+                                // If within 60 minutes (generous buffer for long calls)
+                                if (Math.abs(mTime - cTime) < 3600000) {
+                                    await deleteDoc(doc(db, "messages", msgDoc.id));
+                                }
+                            }
+                        });
+                    }
                 } catch(e) {
                     console.error("Error deleting call:", e);
                 }
