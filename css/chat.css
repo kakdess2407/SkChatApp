@@ -845,4 +845,151 @@
     transform: scale(0.95);
 }
 
+/* ===== Call Top Bar (overlay on video during connected call) ===== */
+.call-top-bar {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 100%);
+    z-index: 8;
+}
 
+.call-top-btn {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255,255,255,0.15);
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s, transform 0.1s;
+    backdrop-filter: blur(4px);
+}
+.call-top-btn:hover { background: rgba(255,255,255,0.3); transform: scale(1.05); }
+.call-top-btn:active { transform: scale(0.95); }
+
+.call-top-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+.call-top-info span {
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+.call-timer {
+    font-size: 12px !important;
+    font-weight: 400 !important;
+    opacity: 0.85;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ===== Control Labels ===== */
+.control-btn-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+.control-label {
+    color: rgba(255,255,255,0.7);
+    font-size: 11px;
+    letter-spacing: 0.3px;
+}
+
+/* Screen share active */
+.control-btn.sharing {
+    background-color: rgba(0, 168, 132, 0.8) !important;
+    box-shadow: 0 0 0 2px rgba(0, 168, 132, 0.4);
+}
+
+/* ===== PiP Mini Player ===== */
+.pip-mini-player {
+    display: none;
+    position: fixed;
+    bottom: 20px; right: 20px;
+    width: 180px; height: 260px;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.1);
+    z-index: 9999;
+    cursor: grab;
+    background: #000;
+    user-select: none;
+}
+.pip-mini-player:hover {
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 0 0 2px rgba(0,168,132,0.4);
+}
+.pip-mini-player.active { display: block; animation: pipSlideIn 0.3s ease-out; }
+@keyframes pipSlideIn {
+    from { opacity: 0; transform: translateY(20px) scale(0.9); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.pip-mini-player.dragging { cursor: grabbing; transition: none; }
+.pip-mini-player video { width: 100%; height: 100%; object-fit: cover; }
+
+.pip-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 8px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, transparent 40%, transparent 60%, rgba(0,0,0,0.5) 100%);
+}
+.pip-mini-player:hover .pip-overlay { opacity: 1; }
+
+.pip-name {
+    color: white; font-size: 12px; font-weight: 500;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+    max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pip-actions { display: flex; gap: 12px; }
+.pip-btn {
+    width: 36px; height: 36px;
+    border-radius: 50%; border: none;
+    background: rgba(255,255,255,0.2);
+    color: white; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background-color 0.2s, transform 0.1s;
+    backdrop-filter: blur(4px);
+}
+.pip-btn:hover { background: rgba(255,255,255,0.35); transform: scale(1.1); }
+.pip-btn:active { transform: scale(0.9); }
+.pip-hangup { background: rgba(234,67,53,0.8) !important; }
+.pip-hangup:hover { background: rgba(234,67,53,1) !important; }
+
+.pip-timer {
+    position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+    color: white; font-size: 11px; font-variant-numeric: tabular-nums;
+    background: rgba(0,0,0,0.5); padding: 2px 8px; border-radius: 8px;
+    pointer-events: none;
+}
+
+/* Connected video: hide avatar, gradient controls */
+.call-overlay.video-connected .call-info { display: none; }
+.call-overlay.video-connected .call-controls {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    padding: 20px 0 30px;
+    background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 100%);
+    margin-bottom: 0;
+}
+
+/* Responsive PiP */
+@media (max-width: 768px) {
+    .pip-mini-player { width: 140px; height: 200px; bottom: 15px; right: 15px; border-radius: 12px; }
+    .call-top-bar { padding: 8px 12px; }
+    .call-top-btn { width: 36px; height: 36px; }
+    .control-label { font-size: 10px; }
+}

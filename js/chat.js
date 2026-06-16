@@ -934,6 +934,258 @@ let isVideoStopped = false;
 let callTimeoutTimer = null;
 let audioCtx = null;
 let ringtoneInterval = null;
+let isInPipMode = false;
+let isScreenSharing = false;
+let screenStream = null;
+let callTimerInterval = null;
+let callStartTime = null;
+let currentCallType = null;
+let currentFacingMode = 'user';
+let currentCallReceiverName = '';
+
+// Call timer
+const startCallTimer = () => {
+    callStartTime = Date.now();
+    const timerEl = document.getElementById('call-top-timer');
+    const pipTimerEl = document.getElementById('pip-timer');
+    const updateTimer = () => {
+        if (!callStartTime) return;
+        const elapsed = Math.floor((Date.now() - callStartTime) / 1000);
+        const mins = String(Math.floor(elapsed / 60)).padStart(2, '0');
+        const secs = String(elapsed % 60).padStart(2, '0');
+        const timeStr = `${mins}:${secs}`;
+        if (timerEl) timerEl.innerText = timeStr;
+        if (pipTimerEl) pipTimerEl.innerText = timeStr;
+    };
+    callTimerInterval = setInterval(updateTimer, 1000);
+    updateTimer();
+};
+
+const stopCallTimer = () => {
+    if (callTimerInterval) { clearInterval(callTimerInterval); callTimerInterval = null; }
+    callStartTime = null;
+    const timerEl = document.getElementById('call-top-timer');
+    const pipTimerEl = document.getElementById('pip-timer');
+    if (timerEl) timerEl.innerText = '00:00';
+    if (pipTimerEl) pipTimerEl.innerText = '00:00';
+};
+
+// In-App PiP Mode
+const enterInAppPip = () => {
+    if (!currentCallId || isInPipMode) return;
+    isInPipMode = true;
+
+    const remoteVideo = document.getElementById('remote-video');
+    const pipVideo = document.getElementById('pip-video');
+    const pipPlayer = document.getElementById('pip-mini-player');
+    const pipName = document.getElementById('pip-name');
+
+    if (remoteVideo && remoteVideo.srcObject) {
+        pipVideo.srcObject = remoteVideo.srcObject;
+    }
+    if (pipName) pipName.innerText = currentCallReceiverName;
+
+    document.getElementById('call-overlay').classList.remove('active');
+    pipPlayer.classList.add('active');
+};
+
+const exitInAppPip = () => {
+    if (!isInPipMode) return;
+    isInPipMode = false;
+
+    const pipPlayer = document.getElementById('pip-mini-player');
+    const pipVideo = document.getElementById('pip-video');
+
+    pipPlayer.classList.remove('active');
+    pipVideo.srcObject = null;
+
+    if (currentCallId) {
+        document.getElementById('call-overlay').classList.add('active');
+    }
+};
+
+// Browser PiP (native)
+const enterBrowserPip = async () => {
+    if (!document.pictureInPictureEnabled) return;
+    const remoteVideo = document.getElementById('remote-video');
+    if (remoteVideo && remoteVideo.srcObject && !document.pictureInPictureElement) {
+        try { await remoteVideo.requestPictureInPicture(); } catch (e) { console.warn('Browser PiP failed:', e); }
+    }
+};
+
+const exitBrowserPip = async () => {
+    if (document.pictureInPictureElement) {
+        try { await document.exitPictureInPicture(); } catch (e) {}
+    }
+};
+
+// Auto browser PiP on tab hide
+document.addEventListener('visibilitychange', () => {
+    if (!currentCallId || !currentCallType || currentCallType !== 'video') return;
+    if (document.hidden) {
+        enterBrowserPip();
+    } else {
+        exitBrowserPip();
+    }
+});
+
+// Draggable PiP
+const initDraggablePip = () => {
+    const pip = document.getElementById('pip-mini-player');
+    if (!pip) return;
+    let isDragging = false, startX, startY, startLeft, startTop;
+
+    pip.addEventListener('mousedown', (e) => {
+        if (e.target.closest('.pip-btn')) return;
+        isDragging = true;
+        pip.classList.add('dragging');
+        startX = e.clientX; startY = e.clientY;
+        const rect = pip.getBoundingClientRect();
+        startLeft = rect.left; startTop = rect.top;
+        e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const dx = e.clientX - startX, dy = e.clientY - startY;
+        pip.style.left = (startLeft + dx) + 'px';
+        pip.style.top = (startTop + dy) + 'px';
+        pip.style.right = 'auto'; pip.style.bottom = 'auto';
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (!isDragging) return;
+        isDragging = false;
+        pip.classList.remove('dragging');
+    });
+
+    // Touch support
+    pip.addEventListener('touchstart', (e) => {
+        if (e.target.closest('.pip-btn')) return;
+        isDragging = true;
+        pip.classList.add('dragging');
+        const touch = e.touches[0];
+        startX = touch.clientX; startY = touch.clientY;
+        const rect = pip.getBoundingClientRect();
+        startLeft = rect.left; startTop = rect.top;
+    }, { passive: true });
+
+    document.addEventListener('touchmove', (e) => {
+        if (!isDragging) return;
+        const touch = e.touches[0];
+        const dx = touch.clientX - startX, dy = touch.clientY - startY;
+        pip.style.left = (startLeft + dx) + 'px';
+        pip.style.top = (startTop + dy) + 'px';
+        pip.style.right = 'auto'; pip.style.bottom = 'auto';
+    }, { passive: true });
+
+    document.addEventListener('touchend', () => {
+        if (!isDragging) return;
+        isDragging = false;
+        pip.classList.remove('dragging');
+    });
+};
+initDraggablePip();
+
+// Switch Camera
+const switchCamera = async () => {
+    if (!localStream || !peerConnection) return;
+
+    currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+
+    try {
+        const newStream = await navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: { facingMode: currentFacingMode }
+        });
+
+        const newVideoTrack = newStream.getVideoTracks()[0];
+        const sender = peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
+
+        if (sender) {
+            await sender.replaceTrack(newVideoTrack);
+        }
+
+        // Replace local track
+        const oldVideoTrack = localStream.getVideoTracks()[0];
+        if (oldVideoTrack) oldVideoTrack.stop();
+        localStream.removeTrack(oldVideoTrack);
+        localStream.addTrack(newVideoTrack);
+
+        const localVideo = document.getElementById('local-video');
+        if (localVideo) localVideo.srcObject = localStream;
+    } catch (err) {
+        console.error('Error switching camera:', err);
+        currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+    }
+};
+
+// Screen Sharing
+const toggleScreenShare = async () => {
+    if (!peerConnection) return;
+
+    const btnShare = document.getElementById('btn-call-share-screen');
+
+    if (!isScreenSharing) {
+        try {
+            screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+            const screenTrack = screenStream.getVideoTracks()[0];
+
+            const sender = peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
+            if (sender) {
+                await sender.replaceTrack(screenTrack);
+            }
+
+            const localVideo = document.getElementById('local-video');
+            if (localVideo) localVideo.srcObject = screenStream;
+
+            isScreenSharing = true;
+            if (btnShare) btnShare.classList.add('sharing');
+
+            // When user stops sharing via browser UI
+            screenTrack.onended = () => { stopScreenShare(); };
+        } catch (err) {
+            console.error('Screen share failed:', err);
+        }
+    } else {
+        stopScreenShare();
+    }
+};
+
+const stopScreenShare = async () => {
+    if (!isScreenSharing) return;
+
+    if (screenStream) {
+        screenStream.getTracks().forEach(t => t.stop());
+        screenStream = null;
+    }
+
+    // Revert to camera
+    try {
+        const camStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: currentFacingMode }
+        });
+        const camTrack = camStream.getVideoTracks()[0];
+
+        const sender = peerConnection?.getSenders()?.find(s => s.track && s.track.kind === 'video');
+        if (sender) {
+            await sender.replaceTrack(camTrack);
+        }
+
+        const oldCamTrack = localStream?.getVideoTracks()[0];
+        if (oldCamTrack) { oldCamTrack.stop(); localStream.removeTrack(oldCamTrack); }
+        if (localStream) localStream.addTrack(camTrack);
+
+        const localVideo = document.getElementById('local-video');
+        if (localVideo) localVideo.srcObject = localStream;
+    } catch (err) {
+        console.error('Error reverting to camera:', err);
+    }
+
+    isScreenSharing = false;
+    const btnShare = document.getElementById('btn-call-share-screen');
+    if (btnShare) btnShare.classList.remove('sharing');
+};
 
 // Helper to log call status inside message history
 const logCallMessage = async (callerId, receiverId, callType, callStatus) => {
@@ -1090,14 +1342,23 @@ const startCall = async (type = 'video') => {
         return;
     }
 
+    currentCallType = type;
+    currentCallReceiverName = receiverUser.fullName;
+    currentFacingMode = 'user';
+
     document.getElementById('call-name').innerText = receiverUser.fullName;
-    document.getElementById('call-email').innerText = receiverUser.email || '';
+    const callTopName = document.getElementById('call-top-name');
+    if (callTopName) callTopName.innerText = receiverUser.fullName;
     document.getElementById('call-avatar').src = receiverUser.profilePic || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
     document.getElementById('call-status').innerText = "Ringing...";
     document.getElementById('call-avatar').classList.add('ringing');
     document.getElementById('call-overlay').classList.add('active');
 
     document.getElementById('btn-call-toggle-video').style.display = type === 'video' ? 'flex' : 'none';
+    const screenShareWrapper = document.getElementById('screen-share-wrapper');
+    if (screenShareWrapper) screenShareWrapper.style.display = type === 'video' ? 'flex' : 'none';
+    const topBar = document.getElementById('call-top-bar');
+    if (topBar) topBar.style.display = type === 'video' ? 'flex' : 'none';
     isAudioMuted = false;
     isVideoStopped = false;
     updateControlButtonsUI();
@@ -1191,6 +1452,11 @@ const startCall = async (type = 'video') => {
                 stopRingtone();
                 document.getElementById('call-status').innerText = "Connected";
                 document.getElementById('call-avatar').classList.remove('ringing');
+                
+                if (type === 'video') {
+                    document.getElementById('call-overlay').classList.add('video-connected');
+                    startCallTimer();
+                }
 
                 const answerDesc = new RTCSessionDescription(data.answer);
                 if (!peerConnection.currentRemoteDescription) {
@@ -1251,7 +1517,6 @@ const showIncomingCallPopup = (callId, callData) => {
     startRingtone(false);
 
     document.getElementById('incoming-name').innerText = callData.callerName;
-    document.getElementById('incoming-email').innerText = callData.callerEmail || '';
     document.getElementById('incoming-avatar').src = callData.callerPic || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
     document.getElementById('incoming-type').innerText = `Incoming ${callData.type} call...`;
     document.getElementById('incoming-call-overlay').style.display = 'flex';
@@ -1308,14 +1573,23 @@ const acceptIncomingCall = async () => {
         return;
     }
 
+    currentCallType = type;
+    currentCallReceiverName = callData.callerName;
+    currentFacingMode = 'user';
+
     document.getElementById('call-name').innerText = callData.callerName;
-    document.getElementById('call-email').innerText = callData.callerEmail || '';
+    const callTopName = document.getElementById('call-top-name');
+    if (callTopName) callTopName.innerText = callData.callerName;
     document.getElementById('call-avatar').src = callData.callerPic || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
     document.getElementById('call-status').innerText = "Connecting...";
     document.getElementById('call-avatar').classList.remove('ringing');
     document.getElementById('call-overlay').classList.add('active');
 
     document.getElementById('btn-call-toggle-video').style.display = type === 'video' ? 'flex' : 'none';
+    const screenShareWrapper = document.getElementById('screen-share-wrapper');
+    if (screenShareWrapper) screenShareWrapper.style.display = type === 'video' ? 'flex' : 'none';
+    const topBar = document.getElementById('call-top-bar');
+    if (topBar) topBar.style.display = type === 'video' ? 'flex' : 'none';
     isAudioMuted = false;
     isVideoStopped = false;
     updateControlButtonsUI();
@@ -1373,6 +1647,11 @@ const acceptIncomingCall = async () => {
         });
 
         document.getElementById('call-status').innerText = "Connected";
+        
+        if (type === 'video') {
+            document.getElementById('call-overlay').classList.add('video-connected');
+            startCallTimer();
+        }
 
         const callerCandidatesCol = collection(db, "calls", currentCallId, "callerCandidates");
         callerCandidatesUnsubscribe = onSnapshot(callerCandidatesCol, (candSnapshot) => {
@@ -1500,6 +1779,10 @@ const updateControlButtonsUI = () => {
 
 // Cleanup calling resource
 const cleanupCall = (statusMessage = null) => {
+    stopCallTimer();
+    exitInAppPip();
+    stopScreenShare();
+
     if (callTimeoutTimer) {
         clearTimeout(callTimeoutTimer);
         callTimeoutTimer = null;
@@ -1542,6 +1825,7 @@ const cleanupCall = (statusMessage = null) => {
     }
 
     document.getElementById('call-overlay').classList.remove('active');
+    document.getElementById('call-overlay').classList.remove('video-connected');
     document.getElementById('call-avatar').classList.remove('ringing');
 
     if (statusMessage) {
@@ -1603,6 +1887,18 @@ if (btnCallToggleMic) {
 if (btnCallToggleVid) {
     btnCallToggleVid.addEventListener('click', toggleCamera);
 }
+
+const btnCallPip = document.getElementById('btn-call-pip');
+const btnPipExpand = document.getElementById('btn-pip-expand');
+const btnCallSwitchCam = document.getElementById('btn-call-switch-cam');
+const btnCallShareScreen = document.getElementById('btn-call-share-screen');
+const btnPipHangup = document.getElementById('btn-pip-hangup');
+
+if (btnCallPip) btnCallPip.addEventListener('click', enterInAppPip);
+if (btnPipExpand) btnPipExpand.addEventListener('click', exitInAppPip);
+if (btnCallSwitchCam) btnCallSwitchCam.addEventListener('click', switchCamera);
+if (btnCallShareScreen) btnCallShareScreen.addEventListener('click', toggleScreenShare);
+if (btnPipHangup) btnPipHangup.addEventListener('click', hangupCall);
 
 // Start listening for incoming calls after initialization is complete
 if (currentUser) {
