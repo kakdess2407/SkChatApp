@@ -1586,6 +1586,9 @@ const startCall = async (type = 'video') => {
 
     const callDocRef = doc(collection(db, "calls"));
     currentCallId = callDocRef.id;
+    if (window.AndroidAuth && typeof window.AndroidAuth.setActiveCallId === 'function') {
+        window.AndroidAuth.setActiveCallId(currentCallId);
+    }
 
     if (window.AndroidAuth && typeof window.AndroidAuth.startNativeCall === 'function') {
         window.AndroidAuth.startNativeCall(currentCallId, type, true);
@@ -1659,6 +1662,9 @@ const startCall = async (type = 'video') => {
     try {
         const callDocRef = doc(collection(db, "calls"));
         currentCallId = callDocRef.id;
+        if (window.AndroidAuth && typeof window.AndroidAuth.setActiveCallId === 'function') {
+            window.AndroidAuth.setActiveCallId(currentCallId);
+        }
 
         if (window.AndroidAuth && typeof window.AndroidAuth.startNativeCall === 'function') {
             // Let Android Native handle the WebRTC connection entirely
@@ -1812,6 +1818,9 @@ const listenForIncomingCalls = () => {
 // Show incoming call banner
 const showIncomingCallPopup = (callId, callData) => {
     currentCallId = callId;
+    if (window.AndroidAuth && typeof window.AndroidAuth.setActiveCallId === 'function') {
+        window.AndroidAuth.setActiveCallId(currentCallId);
+    }
     startRingtone(false);
 
     document.getElementById('incoming-name').innerText = callData.callerName;
@@ -1836,6 +1845,9 @@ const cleanupIncomingCallPopup = () => {
         callUnsubscribe = null;
     }
     currentCallId = null;
+    if (window.AndroidAuth && typeof window.AndroidAuth.setActiveCallId === 'function') {
+        window.AndroidAuth.setActiveCallId(null);
+    }
 };
 
 // Accept call
@@ -2151,6 +2163,9 @@ const cleanupCall = (statusMessage = null) => {
     }
     
     currentCallId = null;
+    if (window.AndroidAuth && typeof window.AndroidAuth.setActiveCallId === 'function') {
+        window.AndroidAuth.setActiveCallId(null);
+    }
 };
 
 // Handle tab closing and presence
@@ -2447,18 +2462,15 @@ if (btnEditCalls && btnDeleteCalls) {
                         });
                     }
                 } catch(e) {
-                    console.error("Error deleting call:", e);
-                }
-            }
-            // Exit edit mode after deletion
-            btnEditCalls.click();
-        }
-    });
-}
+
 
 window.onNativePipModeChanged = function(isInPipMode) {
     if (isInPipMode) {
         document.body.classList.add('native-pip-mode');
+        // Restore call overlay visibility by exiting in-app pip
+        if (typeof exitInAppPip === 'function') {
+            exitInAppPip();
+        }
     } else {
         document.body.classList.remove('native-pip-mode');
     }
