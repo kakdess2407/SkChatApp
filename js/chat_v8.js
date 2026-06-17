@@ -319,6 +319,13 @@ const updateChatUIState = (chatData) => {
     
     // Handle Blocked State
     if (chatData.blockedBy && chatData.blockedBy.length > 0) {
+        // If we are currently on a call with this user, hang up immediately!
+        if (currentCallId && chatData.participants && chatData.participants.includes(currentCallOtherUserId)) {
+            if (typeof hangupCall === 'function') {
+                hangupCall();
+            }
+        }
+        
         if (chatInputArea) chatInputArea.style.display = 'none';
         connectionBanner.style.display = 'flex';
         
@@ -1164,6 +1171,7 @@ let callStartTime = null;
 let currentCallType = null;
 let currentFacingMode = 'user';
 let currentCallReceiverName = '';
+let currentCallOtherUserId = null;
 
 // Call timer
 const startCallTimer = () => {
@@ -1209,7 +1217,13 @@ const enterInAppPip = () => {
 
     document.getElementById('call-overlay').classList.remove('active');
     pipPlayer.classList.add('active');
+    
+    if (window.AndroidAuth && typeof window.AndroidAuth.setInAppPipModeActive === 'function') {
+        window.AndroidAuth.setInAppPipModeActive(true);
+    }
 };
+
+window.triggerInAppPip = enterInAppPip;
 
 const exitInAppPip = () => {
     if (!isInPipMode) return;
@@ -1223,6 +1237,10 @@ const exitInAppPip = () => {
 
     if (currentCallId) {
         document.getElementById('call-overlay').classList.add('active');
+    }
+    
+    if (window.AndroidAuth && typeof window.AndroidAuth.setInAppPipModeActive === 'function') {
+        window.AndroidAuth.setInAppPipModeActive(false);
     }
 };
 
@@ -1592,6 +1610,7 @@ const startCall = async (type = 'video') => {
 
     currentCallType = type;
     currentCallReceiverName = receiverUser.fullName;
+    currentCallOtherUserId = receiverUser.userId;
     currentFacingMode = 'user';
 
     document.getElementById('call-name').innerText = receiverUser.fullName;
@@ -1853,6 +1872,7 @@ const acceptIncomingCall = async () => {
 
     currentCallType = type;
     currentCallReceiverName = callData.callerName;
+    currentCallOtherUserId = callData.callerId;
     currentFacingMode = 'user';
 
     document.getElementById('call-name').innerText = callData.callerName;
