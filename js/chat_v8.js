@@ -206,7 +206,8 @@ if (currentUser && chatList) {
         allUsers = [];
         snapshot.forEach((doc) => {
             const userData = { docId: doc.id, ...doc.data() };
-            if (userData.userId !== currentUser.userId && userData.fullName.toLowerCase() !== 'admin') {
+            const fullName = userData.fullName || "";
+            if (userData.userId !== currentUser.userId && fullName.toLowerCase() !== 'admin') {
                 allUsers.push(userData);
             }
         });
@@ -313,7 +314,7 @@ if(searchUsers) {
     searchUsers.addEventListener('input', (e) => {
         const val = e.target.value.toLowerCase();
         const filtered = allUsers.filter(u => 
-            u.fullName.toLowerCase().includes(val) || 
+            (u.fullName?.toLowerCase().includes(val)) || 
             (u.email && u.email.toLowerCase().includes(val))
         );
         renderUsers(filtered);
