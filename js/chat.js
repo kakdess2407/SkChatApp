@@ -9,6 +9,10 @@ if (!currentUserRaw && window.location.pathname.includes('chat.html')) {
 }
 const currentUser = JSON.parse(currentUserRaw);
 
+if (currentUser && window.AndroidAuth) {
+    window.AndroidAuth.startCallListener(currentUser.userId);
+}
+
 // Real-time Admin Approval Check
 let userApprovalUnsubscribe = null;
 if (currentUser && window.location.pathname.includes('chat.html')) {
