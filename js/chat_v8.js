@@ -2461,9 +2461,14 @@ if (btnEditCalls && btnDeleteCalls) {
                             }
                         });
                     }
-                } catch(e) {
-
-
+                } catch(e) {                    console.error("Error deleting call:", e);
+                }
+            }
+            // Exit edit mode after deletion
+            btnEditCalls.click();
+        }
+    });
+}
 window.onNativePipModeChanged = function(isInPipMode) {
     if (isInPipMode) {
         document.body.classList.add('native-pip-mode');
