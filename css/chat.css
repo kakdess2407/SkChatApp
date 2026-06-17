@@ -1157,3 +1157,54 @@
 .calls-edit-mode .call-log-checkbox {
     display: block;
 }
+
+/* ===== Native PiP Mode (Android Picture-in-Picture) ===== */
+body.native-pip-mode {
+    background: #000 !important;
+}
+
+body.native-pip-mode .app-container {
+    display: none !important;
+}
+
+body.native-pip-mode .call-overlay {
+    background-color: transparent !important;
+    padding: 0 !important;
+}
+
+body.native-pip-mode .call-container {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: none !important;
+}
+
+body.native-pip-mode .call-top-bar,
+body.native-pip-mode .call-info,
+body.native-pip-mode .call-controls {
+    display: none !important;
+}
+
+body.native-pip-mode .video-container {
+    width: 100vw !important;
+    height: 100vh !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    z-index: 999999 !important;
+}
+
+body.native-pip-mode #remote-video {
+    width: 100vw !important;
+    height: 100vh !important;
+    object-fit: cover !important;
+    border-radius: 0 !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+}
+
+body.native-pip-mode #local-video {
+    display: none !important;
+}
