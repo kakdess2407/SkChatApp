@@ -288,6 +288,8 @@ if (currentUser) {
 const updateChatUIState = (chatData) => {
     const chatInputArea = document.querySelector('.chat-input-container');
     let connectionBanner = document.getElementById('connection-banner');
+    const btnAudioCall = document.getElementById('btn-audio-call');
+    const btnVideoCall = document.getElementById('btn-video-call');
     
     if (!connectionBanner) {
         connectionBanner = document.createElement('div');
@@ -302,9 +304,15 @@ const updateChatUIState = (chatData) => {
         if (!chatData?.blockedBy || chatData.blockedBy.length === 0) {
             if (chatInputArea) chatInputArea.style.display = 'flex';
             if (connectionBanner) connectionBanner.style.display = 'none';
+            if (btnAudioCall) btnAudioCall.style.display = 'flex';
+            if (btnVideoCall) btnVideoCall.style.display = 'flex';
             return;
         }
     }
+    
+    // Hide call buttons for pending/rejected/blocked chats
+    if (btnAudioCall) btnAudioCall.style.display = 'none';
+    if (btnVideoCall) btnVideoCall.style.display = 'none';
     
     // Handle Blocked State
     if (chatData.blockedBy && chatData.blockedBy.length > 0) {
@@ -575,7 +583,6 @@ const renderMessage = (msg) => {
     div.innerHTML = contentHtml;
     chatMessagesContainer.appendChild(div);
 };
-
 const scrollToBottom = () => {
     chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
 };
@@ -583,6 +590,13 @@ const scrollToBottom = () => {
 // Send Message
 const sendMessage = async (text = '', fileUrl = null, fileType = null) => {
     if ((!text.trim() && !fileUrl) || !activeChatId) return;
+    
+    // Security check: cannot send messages if chat is blocked
+    const currentChatData = userChats.get(activeChatId);
+    if (currentChatData && currentChatData.blockedBy && currentChatData.blockedBy.length > 0) {
+        alert("You cannot send messages to a blocked chat.");
+        return;
+    }
 
     messageInput.value = '';
 
@@ -1522,8 +1536,21 @@ const stopRingtone = () => {
 
 // Start outgoing call
 const startCall = async (type = 'video') => {
-    if (!activeChatUserId) return;
+    if (!activeChatId || !activeChatUserId) return;
     
+    // Security check: cannot start call if chat is blocked or pending
+    const currentChatData = userChats.get(activeChatId);
+    if (currentChatData) {
+        if (currentChatData.blockedBy && currentChatData.blockedBy.length > 0) {
+            alert("You cannot call a blocked user.");
+            return;
+        }
+        if (currentChatData.connectionStatus && currentChatData.connectionStatus !== 'accepted') {
+            alert("You cannot call a user until they accept your connection request.");
+            return;
+        }
+    }
+
     const receiverUser = allUsers.find(u => u.userId === activeChatUserId);
     if (!receiverUser) {
         alert("Cannot call user: not found.");
