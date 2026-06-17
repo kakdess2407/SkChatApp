@@ -62,6 +62,7 @@ const messageInput = document.getElementById('message-input');
 const btnSend = document.getElementById('btn-send');
 const searchUsers = document.getElementById('search-users');
 const btnClearChat = document.getElementById('btn-clear-chat');
+const btnBlockUser = document.getElementById('btn-block-user');
 
 // State
 let activeChatUserId = null;
@@ -297,12 +298,34 @@ const updateChatUIState = (chatData) => {
         }
     }
     
-    if (!chatData || !chatData.connectionStatus || chatData.connectionStatus === 'accepted') {
-        if (chatInputArea) chatInputArea.style.display = 'flex';
-        if (connectionBanner) connectionBanner.style.display = 'none';
+    if (!chatData || (!chatData.connectionStatus && !chatData.blockedBy) || chatData.connectionStatus === 'accepted') {
+        if (!chatData?.blockedBy || chatData.blockedBy.length === 0) {
+            if (chatInputArea) chatInputArea.style.display = 'flex';
+            if (connectionBanner) connectionBanner.style.display = 'none';
+            return;
+        }
+    }
+    
+    // Handle Blocked State
+    if (chatData.blockedBy && chatData.blockedBy.length > 0) {
+        if (chatInputArea) chatInputArea.style.display = 'none';
+        connectionBanner.style.display = 'flex';
+        
+        if (chatData.blockedBy.includes(currentUser.userId)) {
+            connectionBanner.innerHTML = `
+                <p>You blocked this user.</p>
+                <div class="connection-actions">
+                    <button id="btn-unblock-user" class="btn-accept">Unblock</button>
+                </div>
+            `;
+            document.getElementById('btn-unblock-user').onclick = () => window.toggleBlockUser(activeChatId);
+        } else {
+            connectionBanner.innerHTML = `<p>You cannot reply to this conversation.</p>`;
+        }
         return;
     }
 
+    // Handle Connection Requests
     if (chatData.connectionStatus === 'pending') {
         if (chatInputArea) chatInputArea.style.display = 'none';
         connectionBanner.style.display = 'flex';
@@ -635,21 +658,50 @@ if (btnClearChat) {
             querySnapshot.forEach((document) => {
                 deletePromises.push(deleteDoc(doc(db, "messages", document.id)));
             });
-            
             await Promise.all(deletePromises);
             
             // Delete the chat document from the chats collection to clear the last message preview
-            await deleteDoc(doc(db, "chats", activeChatId));
+            await updateDoc(doc(db, "chats", activeChatId), {
+                lastMessage: "",
+                lastMessageTime: serverTimestamp()
+            });
             
             alert('Chat cleared successfully.');
         } catch(e) {
             console.error("Error clearing chat:", e);
-            alert("Error clearing chat.");
+            alert('Error clearing chat.');
         }
     });
 }
 
+// Block / Unblock User
+window.toggleBlockUser = async (chatId) => {
+    if (!chatId) return;
+    try {
+        const chatData = userChats.get(chatId);
+        let blockedBy = chatData?.blockedBy || [];
+        
+        if (blockedBy.includes(currentUser.userId)) {
+            blockedBy = blockedBy.filter(id => id !== currentUser.userId);
+        } else {
+            blockedBy.push(currentUser.userId);
+        }
+        
+        await updateDoc(doc(db, "chats", chatId), {
+            blockedBy: blockedBy
+        });
+    } catch(e) {
+        console.error("Error toggling block status:", e);
+    }
+};
 
+if (btnBlockUser) {
+    btnBlockUser.addEventListener('click', () => {
+        if (confirm("Are you sure you want to block/unblock this user?")) {
+            window.toggleBlockUser(activeChatId);
+        }
+    });
+}
 
 // Keep Alive (Update online status)
 setInterval(() => {
