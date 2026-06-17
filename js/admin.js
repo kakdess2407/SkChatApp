@@ -1,16 +1,15 @@
 import { db } from './firebase-config.js';
 import { collection, getDocs, deleteDoc, doc, query, onSnapshot, where, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-// Basic Auth check for Admin
-if (!localStorage.getItem('adminAuth') && window.location.pathname.includes('admin.html')) {
-    // Just a fallback in case someone accesses directly
-    const pwd = prompt("Enter Admin Password:");
-    if (pwd !== 'Admin@0022') {
-        window.location.href = 'index.html';
-    } else {
-        localStorage.setItem('adminAuth', 'true');
-    }
-}
+const ADMIN_HASH = "1f4927a6ba1c3e5b72b165d7c0a14d864340cfe6c446a314d573389a20450cb5";
+
+const hashAdminCode = async (code) => {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(code);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+};
 
 // DOM Elements
 const navLinks = document.querySelectorAll('.admin-nav a');
@@ -242,4 +241,22 @@ if (btnClearAllChats) {
 }
 
 // Start
-initAdmin();
+const startAdmin = async () => {
+    if (!localStorage.getItem('adminAuth') && window.location.pathname.includes('admin.html')) {
+        const pwd = prompt("Enter Admin Password:");
+        if (!pwd) {
+            window.location.href = 'index.html';
+            return;
+        }
+        const hash = await hashAdminCode(pwd);
+        if (hash !== ADMIN_HASH) {
+            window.location.href = 'index.html';
+            return;
+        } else {
+            localStorage.setItem('adminAuth', 'true');
+        }
+    }
+    initAdmin();
+};
+
+startAdmin();

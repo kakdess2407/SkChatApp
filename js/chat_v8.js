@@ -295,8 +295,16 @@ const updateChatUIState = (chatData) => {
         }
     }
     
-    if (!chatData || (!chatData.connectionStatus && !chatData.blockedBy) || chatData.connectionStatus === 'accepted') {
-        if (!chatData?.blockedBy || chatData.blockedBy.length === 0) {
+    if (!chatData) {
+        if (chatInputArea) chatInputArea.style.display = 'flex';
+        if (connectionBanner) connectionBanner.style.display = 'none';
+        if (btnAudioCall) btnAudioCall.style.display = 'none';
+        if (btnVideoCall) btnVideoCall.style.display = 'none';
+        return;
+    }
+    
+    if ((!chatData.connectionStatus && !chatData.blockedBy) || chatData.connectionStatus === 'accepted') {
+        if (!chatData.blockedBy || chatData.blockedBy.length === 0) {
             if (chatInputArea) chatInputArea.style.display = 'flex';
             if (connectionBanner) connectionBanner.style.display = 'none';
             if (btnAudioCall) btnAudioCall.style.display = '';

@@ -237,8 +237,8 @@
 }
 
 .chat-messages-container {
-    height: calc(100% - 122px);
-    flex: none;
+    flex: 1 1 auto;
+    height: auto;
     padding: 20px 5%;
     overflow-y: auto;
     display: flex;
