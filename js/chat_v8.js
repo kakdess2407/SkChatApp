@@ -14,6 +14,19 @@ if (currentUser && window.AndroidAuth) {
 }
 
 // Real-time Admin Approval Check
+window.openChatFromNative = function(userId) {
+    if (typeof allUsers !== 'undefined' && allUsers.length > 0) {
+        const user = allUsers.find(u => u.userId === userId);
+        if (user) {
+            if (typeof selectUser === 'function') {
+                selectUser(user);
+            }
+        }
+    } else {
+        window.pendingNativeChatId = userId;
+    }
+};
+
 let userApprovalUnsubscribe = null;
 if (currentUser && window.location.pathname.includes('chat.html')) {
     const userDocRef = doc(db, "users", currentUser.userId);
@@ -205,6 +218,12 @@ if (currentUser && chatList) {
             if (activeUser) {
                 activeUserStatus.innerText = activeUser.status === 'online' ? 'online' : 'offline';
             }
+        }
+        
+        if (window.pendingNativeChatId) {
+            const pendingUserId = window.pendingNativeChatId;
+            window.pendingNativeChatId = null;
+            window.openChatFromNative(pendingUserId);
         }
     });
 }
