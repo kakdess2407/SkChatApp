@@ -6,7 +6,7 @@ const SESSION_KEY = "sk_access_granted";
 const SESSION_TOKEN = "verified_session_active";
 
 // Check if already verified this session
-const isVerified = () => sessionStorage.getItem(SESSION_KEY) === SESSION_TOKEN;
+const isVerified = () => localStorage.getItem(SESSION_KEY) === SESSION_TOKEN;
 
 // Hash a string using SHA-256
 const hashCode = async (code) => {
@@ -223,7 +223,7 @@ const showAccessGate = () => {
 
         if (hashed === ACCESS_CODE_HASH) {
             // Success!
-            sessionStorage.setItem(SESSION_KEY, SESSION_TOKEN);
+            localStorage.setItem(SESSION_KEY, SESSION_TOKEN);
             container.style.transition = 'opacity 0.3s, transform 0.3s';
             container.style.opacity = '0';
             container.style.transform = 'translateY(-20px) scale(0.95)';
