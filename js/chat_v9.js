@@ -1370,15 +1370,33 @@ const startCall = async (type = 'video') => {
         return;
     }
 
+    const callDocRef = doc(collection(db, "calls"));
+    currentCallId = callDocRef.id;
+
+    if (window.AndroidAuth && typeof window.AndroidAuth.startNativeCall === 'function') {
+        window.AndroidAuth.startNativeCall(currentCallId, type, true);
+        await setDoc(callDocRef, {
+            callerId: currentUser.userId,
+            callerName: currentUser.fullName,
+            callerEmail: currentUser.email || '',
+            callerPic: currentUser.profilePic || '',
+            receiverId: receiverUser.userId,
+            receiverName: receiverUser.fullName,
+            receiverEmail: receiverUser.email || '',
+            receiverPic: receiverUser.profilePic || '',
+            type: type,
+            status: 'ringing',
+            createdAt: serverTimestamp()
+        });
+        return; // Exit completely, Android handles the rest natively
+    }
+
     try {
-        const constraints = {
-            audio: true,
-            video: type === 'video'
-        };
+        const constraints = { audio: true, video: type === 'video' };
         localStream = await navigator.mediaDevices.getUserMedia(constraints);
     } catch (err) {
         console.error("Camera/Mic access denied or unavailable:", err);
-        alert("Could not access camera or microphone. Please ensure permissions are granted and you are using a secure connection (HTTPS or localhost).");
+        alert("Could not access camera or microphone.");
         return;
     }
 
@@ -1427,49 +1445,69 @@ const startCall = async (type = 'video') => {
         const callDocRef = doc(collection(db, "calls"));
         currentCallId = callDocRef.id;
 
-        peerConnection = new RTCPeerConnection(servers);
+        if (window.AndroidAuth && typeof window.AndroidAuth.startNativeCall === 'function') {
+            // Let Android Native handle the WebRTC connection entirely
+            window.AndroidAuth.startNativeCall(currentCallId, type, true);
+            // Just write the initial status to Firestore, Android will write the offer
+            await setDoc(callDocRef, {
+                callerId: currentUser.userId,
+                callerName: currentUser.fullName,
+                callerEmail: currentUser.email || '',
+                callerPic: currentUser.profilePic || '',
+                receiverId: receiverUser.userId,
+                receiverName: receiverUser.fullName,
+                receiverEmail: receiverUser.email || '',
+                receiverPic: receiverUser.profilePic || '',
+                type: type,
+                status: 'ringing',
+                createdAt: serverTimestamp()
+            });
+        } else {
+            // Standard JS WebRTC flow
+            peerConnection = new RTCPeerConnection(servers);
 
-        localStream.getTracks().forEach(track => {
-            peerConnection.addTrack(track, localStream);
-        });
+            localStream.getTracks().forEach(track => {
+                peerConnection.addTrack(track, localStream);
+            });
 
-        peerConnection.ontrack = (event) => {
-            const remoteStream = event.streams[0];
-            if (type === 'video') {
-                remoteVideo.srcObject = remoteStream;
-            } else {
-                document.getElementById('remote-audio').srcObject = remoteStream;
-            }
-        };
+            peerConnection.ontrack = (event) => {
+                const remoteStream = event.streams[0];
+                if (type === 'video') {
+                    remoteVideo.srcObject = remoteStream;
+                } else {
+                    document.getElementById('remote-audio').srcObject = remoteStream;
+                }
+            };
 
-        peerConnection.onicecandidate = (event) => {
-            if (event.candidate) {
-                addDoc(collection(db, "calls", currentCallId, "callerCandidates"), event.candidate.toJSON());
-            }
-        };
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    addDoc(collection(db, "calls", currentCallId, "callerCandidates"), event.candidate.toJSON());
+                }
+            };
 
-        const offerDescription = await peerConnection.createOffer();
-        await peerConnection.setLocalDescription(offerDescription);
+            const offerDescription = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offerDescription);
 
-        const offer = {
-            sdp: offerDescription.sdp,
-            type: offerDescription.type
-        };
+            const offer = {
+                sdp: offerDescription.sdp,
+                type: offerDescription.type
+            };
 
-        await setDoc(callDocRef, {
-            callerId: currentUser.userId,
-            callerName: currentUser.fullName,
-            callerEmail: currentUser.email || '',
-            callerPic: currentUser.profilePic || '',
-            receiverId: receiverUser.userId,
-            receiverName: receiverUser.fullName,
-            receiverEmail: receiverUser.email || '',
-            receiverPic: receiverUser.profilePic || '',
-            type: type,
-            status: 'ringing',
-            offer: offer,
-            createdAt: serverTimestamp()
-        });
+            await setDoc(callDocRef, {
+                callerId: currentUser.userId,
+                callerName: currentUser.fullName,
+                callerEmail: currentUser.email || '',
+                callerPic: currentUser.profilePic || '',
+                receiverId: receiverUser.userId,
+                receiverName: receiverUser.fullName,
+                receiverEmail: receiverUser.email || '',
+                receiverPic: receiverUser.profilePic || '',
+                type: type,
+                status: 'ringing',
+                offer: offer,
+                createdAt: serverTimestamp()
+            });
+        }
 
         // timeout timer for ringing (30 seconds)
         callTimeoutTimer = setTimeout(async () => {
@@ -1604,6 +1642,11 @@ const acceptIncomingCall = async () => {
 
     if (callUnsubscribe) callUnsubscribe();
 
+    if (window.AndroidAuth && typeof window.AndroidAuth.startNativeCall === 'function') {
+        window.AndroidAuth.startNativeCall(currentCallId, type, false);
+        return; // Android will handle everything natively
+    }
+
     try {
         const constraints = {
             audio: true,
@@ -1658,42 +1701,47 @@ const acceptIncomingCall = async () => {
     }
 
     try {
-        peerConnection = new RTCPeerConnection(servers);
+        if (window.AndroidAuth && typeof window.AndroidAuth.startNativeCall === 'function') {
+            window.AndroidAuth.startNativeCall(currentCallId, type, false);
+            // Android will handle answering
+        } else {
+            peerConnection = new RTCPeerConnection(servers);
 
-        localStream.getTracks().forEach(track => {
-            peerConnection.addTrack(track, localStream);
-        });
+            localStream.getTracks().forEach(track => {
+                peerConnection.addTrack(track, localStream);
+            });
 
-        peerConnection.ontrack = (event) => {
-            const remoteStream = event.streams[0];
-            if (type === 'video') {
-                remoteVideo.srcObject = remoteStream;
-            } else {
-                document.getElementById('remote-audio').srcObject = remoteStream;
-            }
-        };
+            peerConnection.ontrack = (event) => {
+                const remoteStream = event.streams[0];
+                if (type === 'video') {
+                    remoteVideo.srcObject = remoteStream;
+                } else {
+                    document.getElementById('remote-audio').srcObject = remoteStream;
+                }
+            };
 
-        peerConnection.onicecandidate = (event) => {
-            if (event.candidate) {
-                addDoc(collection(db, "calls", currentCallId, "receiverCandidates"), event.candidate.toJSON());
-            }
-        };
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    addDoc(collection(db, "calls", currentCallId, "receiverCandidates"), event.candidate.toJSON());
+                }
+            };
 
-        const offerDesc = new RTCSessionDescription(callData.offer);
-        await peerConnection.setRemoteDescription(offerDesc);
+            const offerDesc = new RTCSessionDescription(callData.offer);
+            await peerConnection.setRemoteDescription(offerDesc);
 
-        const answerDescription = await peerConnection.createAnswer();
-        await peerConnection.setLocalDescription(answerDescription);
+            const answerDescription = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answerDescription);
 
-        const answer = {
-            sdp: answerDescription.sdp,
-            type: answerDescription.type
-        };
+            const answer = {
+                sdp: answerDescription.sdp,
+                type: answerDescription.type
+            };
 
-        await updateDoc(callRef, {
-            answer: answer,
-            status: 'connected'
-        });
+            await updateDoc(callRef, {
+                answer: answer,
+                status: 'connected'
+            });
+        }
 
         document.getElementById('call-status').innerText = "Connected";
         
