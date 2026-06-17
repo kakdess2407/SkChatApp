@@ -1471,6 +1471,7 @@ const startCall = async (type = 'video') => {
                 document.getElementById('call-avatar').classList.remove('ringing');
                 
                 if (type === 'video') {
+                    if (window.AndroidAuth) window.AndroidAuth.setVideoCallActive(true);
                     document.getElementById('call-overlay').classList.add('video-connected');
                     startCallTimer();
                 }
@@ -1670,6 +1671,7 @@ const acceptIncomingCall = async () => {
         document.getElementById('call-status').innerText = "Connected";
         
         if (type === 'video') {
+            if (window.AndroidAuth) window.AndroidAuth.setVideoCallActive(true);
             document.getElementById('call-overlay').classList.add('video-connected');
             startCallTimer();
         }
@@ -1800,6 +1802,7 @@ const updateControlButtonsUI = () => {
 
 // Cleanup calling resource
 const cleanupCall = (statusMessage = null) => {
+    if (window.AndroidAuth) window.AndroidAuth.setVideoCallActive(false);
     stopCallTimer();
     exitInAppPip();
     stopScreenShare();
