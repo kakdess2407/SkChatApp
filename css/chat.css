@@ -1170,9 +1170,6 @@ body.native-pip-mode .app-container {
 body.native-pip-mode .call-overlay {
     background-color: transparent !important;
     padding: 0 !important;
-    display: flex !important;
-    visibility: visible !important;
-    opacity: 1 !important;
 }
 
 body.native-pip-mode .call-container {
