@@ -1163,7 +1163,8 @@ body.native-pip-mode {
     background: #000 !important;
 }
 
-body.native-pip-mode .app-container {
+body.native-pip-mode .app-container,
+body.native-pip-mode .app-background {
     display: none !important;
 }
 

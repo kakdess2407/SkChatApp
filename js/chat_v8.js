@@ -100,6 +100,9 @@ window.addEventListener('popstate', (e) => {
     if (chatArea && chatArea.classList.contains('mobile-active')) {
         chatArea.classList.remove('mobile-active');
         activeChatUserId = null;
+        if (window.AndroidAuth && typeof window.AndroidAuth.setChatOpen === 'function') {
+            window.AndroidAuth.setChatOpen(false);
+        }
         return;
     }
 });
@@ -464,6 +467,9 @@ const selectUser = (user) => {
                 history.pushState({ view: 'chat' }, '', '#chat');
             }
             chatArea.classList.add('mobile-active');
+            if (window.AndroidAuth && typeof window.AndroidAuth.setChatOpen === 'function') {
+                window.AndroidAuth.setChatOpen(true);
+            }
         }
     }
 
