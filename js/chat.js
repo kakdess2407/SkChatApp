@@ -2165,3 +2165,10 @@ if (btnEditCalls && btnDeleteCalls) {
     });
 }
 
+window.onNativePipModeChanged = function(isInPipMode) {
+    if (isInPipMode) {
+        document.body.classList.add('native-pip-mode');
+    } else {
+        document.body.classList.remove('native-pip-mode');
+    }
+};
