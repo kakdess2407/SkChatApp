@@ -1170,6 +1170,9 @@ body.native-pip-mode .app-container {
 body.native-pip-mode .call-overlay {
     background-color: transparent !important;
     padding: 0 !important;
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 
 body.native-pip-mode .call-container {
@@ -1208,3 +1211,44 @@ body.native-pip-mode #remote-video {
 body.native-pip-mode #local-video {
     display: none !important;
 }
+
+/* Connection Requests */
+#connection-banner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 15px;
+    background: var(--wa-bg-panel);
+    border-top: 1px solid var(--wa-border);
+    text-align: center;
+    color: var(--wa-text-primary);
+}
+#connection-banner p {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+}
+.connection-actions {
+    display: flex;
+    gap: 10px;
+}
+.connection-actions button {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    color: #fff;
+    transition: opacity 0.2s;
+}
+.connection-actions button:active {
+    opacity: 0.8;
+}
+.btn-accept {
+    background: var(--wa-green-light);
+}
+.btn-reject {
+    background: #e53935;
+}
+

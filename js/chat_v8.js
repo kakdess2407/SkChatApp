@@ -163,7 +163,15 @@ const renderUsers = (users) => {
     // Filter out removed chats/users (unless search is active!)
     const searchVal = searchUsers ? searchUsers.value.trim().toLowerCase() : '';
     const filteredUsers = users.filter(user => {
-        if (searchVal !== '') return true; // Show in search results
+        if (searchVal !== '') {
+            return (user.fullName?.toLowerCase().includes(searchVal)) || 
+                   (user.email && user.email.toLowerCase().includes(searchVal));
+        }
+        
+        // Hide by default unless there is an existing chat/connection request
+        const chatId = getChatId(currentUser.userId, user.userId);
+        if (!userChats.has(chatId)) return false;
+        
         return !removedChats.hasOwnProperty(user.userId);
     });
 
@@ -249,18 +257,14 @@ if (currentUser) {
         for (const [userId, removedAtStr] of Object.entries(removedChats)) {
             const chatId = getChatId(currentUser.userId, userId);
             const chatData = userChats.get(chatId);
+            
             if (chatData && chatData.lastMessageTime) {
-                try {
-                    const lastMsgTime = chatData.lastMessageTime.toDate ? chatData.lastMessageTime.toDate().getTime() : new Date(chatData.lastMessageTime).getTime();
-                    const removedAt = new Date(removedAtStr).getTime();
-                    
-                    // If a new message arrived after the user removed the chat
-                    if (lastMsgTime > removedAt) {
-                        delete removedChats[userId];
-                        updated = true;
-                    }
-                } catch(e) {
-                    console.error("Error parsing timestamps for auto-unhide:", e);
+                const removedAt = new Date(removedAtStr);
+                const msgTime = chatData.lastMessageTime.toDate ? chatData.lastMessageTime.toDate() : new Date();
+                
+                if (msgTime > removedAt) {
+                    delete removedChats[userId];
+                    updated = true;
                 }
             }
         }
@@ -271,10 +275,84 @@ if (currentUser) {
         
         // Re-render users list to show any updated chat previews
         renderUsers(allUsers);
-    }, (error) => {
-        console.error("Firestore onSnapshot error (chats):", error);
+        
+        // Update chat UI if the current chat changed
+        if (activeChatId && userChats.has(activeChatId)) {
+            updateChatUIState(userChats.get(activeChatId));
+        }
     });
 }
+
+// Update Chat UI State (Connection Requests)
+const updateChatUIState = (chatData) => {
+    const chatInputArea = document.querySelector('.chat-input-container');
+    let connectionBanner = document.getElementById('connection-banner');
+    
+    if (!connectionBanner) {
+        connectionBanner = document.createElement('div');
+        connectionBanner.id = 'connection-banner';
+        const activeChat = document.getElementById('active-chat');
+        if (chatInputArea && activeChat) {
+            activeChat.insertBefore(connectionBanner, chatInputArea);
+        }
+    }
+    
+    if (!chatData || !chatData.connectionStatus || chatData.connectionStatus === 'accepted') {
+        if (chatInputArea) chatInputArea.style.display = 'flex';
+        if (connectionBanner) connectionBanner.style.display = 'none';
+        return;
+    }
+
+    if (chatData.connectionStatus === 'pending') {
+        if (chatInputArea) chatInputArea.style.display = 'none';
+        connectionBanner.style.display = 'flex';
+        
+        if (chatData.connectionInitiator === currentUser.userId) {
+            connectionBanner.innerHTML = `<p>Waiting for the user to accept your request...</p>`;
+        } else {
+            connectionBanner.innerHTML = `
+                <p><strong>${chatData.lastMessageSenderName}</strong> wants to connect with you.</p>
+                <div class="connection-actions">
+                    <button id="btn-accept-request" class="btn-accept">Accept</button>
+                    <button id="btn-reject-request" class="btn-reject">Reject</button>
+                </div>
+            `;
+            document.getElementById('btn-accept-request').onclick = () => respondToRequest(activeChatId, 'accepted');
+            document.getElementById('btn-reject-request').onclick = () => respondToRequest(activeChatId, 'rejected');
+        }
+    } else if (chatData.connectionStatus === 'rejected') {
+        if (chatInputArea) chatInputArea.style.display = 'none';
+        connectionBanner.style.display = 'flex';
+        
+        const rejectTime = chatData.rejectionTimestamp?.toMillis ? chatData.rejectionTimestamp.toMillis() : 0;
+        const hoursPassed = (Date.now() - rejectTime) / (1000 * 60 * 60);
+        
+        if (chatData.connectionInitiator === currentUser.userId) {
+            if (hoursPassed >= 12) {
+                connectionBanner.innerHTML = `<p>Your previous request was rejected. You can now send a new message to request again.</p>`;
+                if (chatInputArea) chatInputArea.style.display = 'flex'; // allow sending a new request
+            } else {
+                const hoursLeft = Math.ceil(12 - hoursPassed);
+                connectionBanner.innerHTML = `<p>Request rejected. You can try again in ${hoursLeft} hours.</p>`;
+            }
+        } else {
+            connectionBanner.innerHTML = `<p>You rejected this request.</p>`;
+        }
+    }
+};
+
+window.respondToRequest = async (chatId, status) => {
+    try {
+        const chatRef = doc(db, "chats", chatId);
+        const updateData = { connectionStatus: status };
+        if (status === 'rejected') {
+            updateData.rejectionTimestamp = serverTimestamp();
+        }
+        await updateDoc(chatRef, updateData);
+    } catch(e) {
+        console.error("Error updating connection status", e);
+    }
+};
 
 // Remove chat from list
 window.removeChat = (userId) => {
@@ -350,6 +428,13 @@ const selectUser = (user) => {
 
     // Render users to update active class
     renderUsers(allUsers);
+    
+    // Update Chat UI State
+    if (userChats.has(activeChatId)) {
+        updateChatUIState(userChats.get(activeChatId));
+    } else {
+        updateChatUIState(null);
+    }
 
     // Load Messages
     loadMessages();
@@ -487,6 +572,27 @@ const sendMessage = async (text = '', fileUrl = null, fileType = null) => {
             fileType: fileType,
             timestamp: serverTimestamp()
         });
+        
+        const isNewChat = !userChats.has(activeChatId);
+        const chatData = userChats.get(activeChatId);
+        
+        let connectionUpdates = {};
+        if (isNewChat || (chatData && chatData.connectionStatus === 'rejected')) {
+            // Check 12 hr cooldown if rejected
+            if (chatData && chatData.connectionStatus === 'rejected') {
+                const rejectTime = chatData.rejectionTimestamp?.toMillis ? chatData.rejectionTimestamp.toMillis() : 0;
+                const hoursPassed = (Date.now() - rejectTime) / (1000 * 60 * 60);
+                if (hoursPassed < 12) {
+                    alert("You must wait 12 hours before sending another request.");
+                    return;
+                }
+            }
+            connectionUpdates = {
+                connectionStatus: 'pending',
+                connectionInitiator: currentUser.userId,
+                rejectionTimestamp: null
+            };
+        }
 
         // Also update chats collection for last message
         const chatRef = doc(db, "chats", activeChatId);
@@ -495,7 +601,8 @@ const sendMessage = async (text = '', fileUrl = null, fileType = null) => {
             lastMessageTime: serverTimestamp(),
             participants: [currentUser.userId, activeChatUserId],
             lastMessageSenderId: currentUser.userId,
-            lastMessageSenderName: currentUser.fullName
+            lastMessageSenderName: currentUser.fullName,
+            ...connectionUpdates
         }, { merge: true });
 
     } catch (error) {
