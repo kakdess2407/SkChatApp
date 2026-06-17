@@ -2404,6 +2404,7 @@ const fetchCallHistory = () => {
 // Edit / Delete Logic
 const btnEditCalls = document.getElementById('btn-edit-calls');
 const btnDeleteCalls = document.getElementById('btn-delete-calls');
+const btnDeleteAllCalls = document.getElementById('btn-delete-all-calls');
 const sidebarCallsPane = document.getElementById('sidebar-calls');
 
 if (btnEditCalls && btnDeleteCalls) {
@@ -2413,14 +2414,25 @@ if (btnEditCalls && btnDeleteCalls) {
             sidebarCallsPane.classList.add('calls-edit-mode');
             btnEditCalls.innerText = 'Cancel';
             btnDeleteCalls.style.display = 'block';
+            if (btnDeleteAllCalls) btnDeleteAllCalls.style.display = 'block';
         } else {
             sidebarCallsPane.classList.remove('calls-edit-mode');
             btnEditCalls.innerText = 'Edit';
             btnDeleteCalls.style.display = 'none';
+            if (btnDeleteAllCalls) btnDeleteAllCalls.style.display = 'none';
             // Uncheck all
             document.querySelectorAll('.call-log-checkbox').forEach(cb => cb.checked = false);
         }
     });
+
+    if (btnDeleteAllCalls) {
+        btnDeleteAllCalls.addEventListener('click', async () => {
+            const allBoxes = document.querySelectorAll('.call-log-checkbox');
+            if (allBoxes.length === 0) return;
+            allBoxes.forEach(cb => cb.checked = true);
+            btnDeleteCalls.click();
+        });
+    }
     
     btnDeleteCalls.addEventListener('click', async () => {
         const checkedBoxes = document.querySelectorAll('.call-log-checkbox:checked');
@@ -2461,7 +2473,8 @@ if (btnEditCalls && btnDeleteCalls) {
                             }
                         });
                     }
-                } catch(e) {                    console.error("Error deleting call:", e);
+                } catch(e) {
+                    console.error("Error deleting call:", e);
                 }
             }
             // Exit edit mode after deletion
