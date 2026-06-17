@@ -473,7 +473,9 @@ const sendMessage = async (text = '', fileUrl = null, fileType = null) => {
         await setDoc(chatRef, {
             lastMessage: text || (fileType?.startsWith('image/') ? '📷 Image' : '📄 File'),
             lastMessageTime: serverTimestamp(),
-            participants: [currentUser.userId, activeChatUserId]
+            participants: [currentUser.userId, activeChatUserId],
+            lastMessageSenderId: currentUser.userId,
+            lastMessageSenderName: currentUser.fullName
         }, { merge: true });
 
     } catch (error) {
@@ -1230,7 +1232,9 @@ const logCallMessage = async (callerId, receiverId, callType, callStatus, callId
                 ? (callStatus === 'missed' ? '📹 Missed video call' : '📹 Video call')
                 : (callStatus === 'missed' ? '📞 Missed voice call' : '📞 Voice call'),
             lastMessageTime: serverTimestamp(),
-            participants: [callerId, receiverId]
+            participants: [callerId, receiverId],
+            lastMessageSenderId: callerId,
+            lastMessageSenderName: currentUser.fullName
         }, { merge: true });
     } catch (e) {
         console.error("Error logging call message:", e);
