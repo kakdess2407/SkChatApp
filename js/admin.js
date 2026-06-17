@@ -143,7 +143,17 @@ window.deleteUser = async (docId, userId) => {
     if (!confirm('Are you sure you want to delete this user?')) return;
     try {
         await deleteDoc(doc(db, "users", docId));
-        alert('User deleted.');
+        
+        // Delete all chats associated with this user
+        const qChats = query(collection(db, "chats"), where("participants", "array-contains", userId));
+        const chatSnaps = await getDocs(qChats);
+        const delChatPromises = [];
+        chatSnaps.forEach((d) => {
+            delChatPromises.push(deleteDoc(doc(db, "chats", d.id)));
+        });
+        await Promise.all(delChatPromises);
+        
+        alert('User and associated chats deleted.');
     } catch (e) {
         console.error(e);
         alert('Error deleting user.');
@@ -186,13 +196,20 @@ window.deleteChat = async (chatId) => {
 // Clear All Handlers
 if (btnClearAllUsers) {
     btnClearAllUsers.addEventListener('click', async () => {
-        if (!confirm('WARNING: This will delete ALL users. Are you sure?')) return;
+        if (!confirm('WARNING: This will delete ALL users and ALL chats. Are you sure?')) return;
         try {
             const qs = await getDocs(collection(db, "users"));
             const delPromises = [];
             qs.forEach((d) => delPromises.push(deleteDoc(doc(db, "users", d.id))));
             await Promise.all(delPromises);
-            alert('All users cleared.');
+            
+            // Also delete all chats just to be completely safe
+            const chats = await getDocs(collection(db, "chats"));
+            const delChatPromises = [];
+            chats.forEach((d) => delChatPromises.push(deleteDoc(doc(db, "chats", d.id))));
+            await Promise.all(delChatPromises);
+            
+            alert('All users and chats cleared.');
         } catch (e) {
             console.error(e);
             alert('Error clearing users.');
