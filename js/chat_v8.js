@@ -2480,3 +2480,4 @@ window.onNativePipModeChanged = function(isInPipMode) {
         document.body.classList.remove('native-pip-mode');
     }
 };
+window.hangupCall = hangupCall;
