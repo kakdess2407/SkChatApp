@@ -33,12 +33,7 @@ if (currentUser && window.location.pathname.includes('chat.html')) {
     userApprovalUnsubscribe = onSnapshot(userDocRef, (docSnap) => {
         if (docSnap.exists()) {
             const userData = docSnap.data();
-            if (userData.isApproved === false) {
-                if (userApprovalUnsubscribe) userApprovalUnsubscribe();
-                localStorage.removeItem('currentUser');
-                alert("Your account approval has been revoked or is pending admin review.");
-                window.location.href = 'index.html';
-            }
+            // Check removed (admin approval is bypassed)
         } else {
             if (userApprovalUnsubscribe) userApprovalUnsubscribe();
             localStorage.removeItem('currentUser');
@@ -304,8 +299,8 @@ const updateChatUIState = (chatData) => {
         if (!chatData?.blockedBy || chatData.blockedBy.length === 0) {
             if (chatInputArea) chatInputArea.style.display = 'flex';
             if (connectionBanner) connectionBanner.style.display = 'none';
-            if (btnAudioCall) btnAudioCall.style.display = 'flex';
-            if (btnVideoCall) btnVideoCall.style.display = 'flex';
+            if (btnAudioCall) btnAudioCall.style.display = '';
+            if (btnVideoCall) btnVideoCall.style.display = '';
             return;
         }
     }
