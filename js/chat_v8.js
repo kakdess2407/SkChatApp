@@ -92,7 +92,6 @@ if (myName && currentUser) {
 }
 
 // Mobile back button listener
-const btnBack = document.getElementById('btn-back');
 if (btnBack) {
     btnBack.onclick = () => {
         history.back(); // Trigger popstate
