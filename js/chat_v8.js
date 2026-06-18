@@ -224,7 +224,15 @@ if (currentUser && chatList) {
         if (activeChatUserId) {
             const activeUser = allUsers.find(u => u.userId === activeChatUserId);
             if (activeUser) {
-                activeUserStatus.innerText = activeUser.status === 'online' ? 'online' : 'offline';
+                if (activeUser.typingIn && activeUser.typingIn === activeChatId) {
+                    activeUserStatus.innerText = 'typing...';
+                    activeUserStatus.style.color = 'var(--wa-green-dark)';
+                    activeUserStatus.style.fontStyle = 'italic';
+                } else {
+                    activeUserStatus.innerText = activeUser.status === 'online' ? 'online' : 'offline';
+                    activeUserStatus.style.color = 'var(--wa-text-light)';
+                    activeUserStatus.style.fontStyle = 'normal';
+                }
             }
         }
         
@@ -452,8 +460,16 @@ const selectUser = (user) => {
     activeChat.style.display = 'flex';
     
     activeUserName.innerText = user.fullName;
-    activeUserStatus.innerText = user.status === 'online' ? 'online' : 'offline';
     
+    if (user.typingIn && user.typingIn === activeChatId) {
+        activeUserStatus.innerText = 'typing...';
+        activeUserStatus.style.color = 'var(--wa-green-dark)';
+        activeUserStatus.style.fontStyle = 'italic';
+    } else {
+        activeUserStatus.innerText = user.status === 'online' ? 'online' : 'offline';
+        activeUserStatus.style.color = 'var(--wa-text-light)';
+        activeUserStatus.style.fontStyle = 'normal';
+    }
     const activeUserPic = document.getElementById('active-user-pic');
     if (activeUserPic) {
         activeUserPic.src = user.profilePic || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
@@ -701,6 +717,38 @@ if (messageInput) {
         if (e.key === 'Enter') {
             sendMessage(messageInput.value);
         }
+    });
+
+    let typingTimeout = null;
+    let isCurrentlyTyping = false;
+
+    messageInput.addEventListener('input', () => {
+        if (!currentUser || !activeChatId) return;
+        
+        if (!isCurrentlyTyping) {
+            isCurrentlyTyping = true;
+            updateDoc(doc(db, "users", currentUser.userId), {
+                typingIn: activeChatId
+            }).catch(err => console.error("Typing start error:", err));
+        }
+        
+        if (typingTimeout) clearTimeout(typingTimeout);
+        
+        typingTimeout = setTimeout(() => {
+            isCurrentlyTyping = false;
+            updateDoc(doc(db, "users", currentUser.userId), {
+                typingIn: null
+            }).catch(err => console.error("Typing stop error:", err));
+        }, 2000);
+    });
+
+    messageInput.addEventListener('blur', () => {
+        if (!currentUser || !isCurrentlyTyping) return;
+        if (typingTimeout) clearTimeout(typingTimeout);
+        isCurrentlyTyping = false;
+        updateDoc(doc(db, "users", currentUser.userId), {
+            typingIn: null
+        }).catch(err => console.error("Typing blur error:", err));
     });
 }
 

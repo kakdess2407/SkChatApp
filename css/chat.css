@@ -454,7 +454,7 @@
     .chat-area {
         position: absolute;
         top: 30px !important;
-        bottom: 0;
+        bottom: env(safe-area-inset-bottom, 50px) !important;
         left: 0;
         right: 0;
         height: calc(100% - 30px) !important;
