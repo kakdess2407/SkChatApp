@@ -101,7 +101,9 @@ if (btnCloseLightbox) {
 }
 
 window.addEventListener('popstate', (e) => {
-    if (imageLightbox && imageLightbox.style.display === 'flex') {
+    if (reactionOverlay && reactionOverlay.style.display === 'flex') {
+        reactionOverlay.style.display = 'none';
+    } else if (imageLightbox && imageLightbox.style.display === 'flex') {
         window.closeLightbox();
     } else if (activeChatId) {
         // If chat is open, close chat
@@ -665,7 +667,7 @@ const renderMessage = (msg) => {
     
     if (msg.fileUrl) {
         if (msg.fileType && msg.fileType.startsWith('image/')) {
-            contentHtml = `<img src="${msg.fileUrl}" class="message-image">`;
+            contentHtml = `<img src="${msg.fileUrl}" class="message-image" style="-webkit-touch-callout: none;">`;
         } else {
             contentHtml = `
                 <a href="${msg.fileUrl}" target="_blank" class="message-file">
@@ -2711,14 +2713,18 @@ const btnDeleteCancel = document.getElementById('btn-delete-cancel');
 let messageToDelete = null;
 
 if (btnShowDeleteModal) {
-    btnShowDeleteModal.addEventListener('click', async () => {
+    const showDelete = (e) => {
+        if(e && e.cancelable) e.preventDefault();
+        if(e) e.stopPropagation();
         if (reactionOverlay) reactionOverlay.style.display = 'none';
         
         if (currentReactionMsgId && activeChatId) {
             messageToDelete = currentReactionMsgId;
             deleteModalOverlay.style.display = 'flex';
         }
-    });
+    };
+    btnShowDeleteModal.addEventListener('click', showDelete);
+    btnShowDeleteModal.addEventListener('touchstart', showDelete);
 }
 
 if (btnDeleteCancel) {
@@ -2873,8 +2879,9 @@ document.addEventListener('click', (e) => {
     }
 });
 
-document.querySelectorAll('.reaction-emoji').forEach(el => {
-    el.addEventListener('click', async (e) => {
+const handleEmojiAction = async (e) => {
+        if(e.cancelable) e.preventDefault();
+        e.stopPropagation();
         const emoji = e.target.getAttribute('data-emoji');
         if (reactionOverlay) reactionOverlay.style.display = 'none';
         
@@ -2887,7 +2894,6 @@ document.querySelectorAll('.reaction-emoji').forEach(el => {
                 if (msgSnap.exists()) {
                     const data = msgSnap.data();
                     if (data.reactions && data.reactions[currentUser.userId] === emoji) {
-                        // User already reacted with this emoji, so toggle it off
                         isRemoving = true;
                         await updateDoc(msgRef, {
                             [`reactions.${currentUser.userId}`]: deleteField()
@@ -2901,17 +2907,14 @@ document.querySelectorAll('.reaction-emoji').forEach(el => {
                             [currentUser.userId]: emoji
                         }
                     }, { merge: true });
-
-                    // Update chats collection to trigger native notification
-                    await setDoc(doc(db, "chats", activeChatId), {
-                        lastMessage: `Reacted ${emoji} to a message`,
-                        lastMessageSenderId: currentUser.userId,
-                        lastMessageTime: serverTimestamp()
-                    }, { merge: true });
                 }
             } catch (err) {
-                console.error("Reaction failed:", err);
+                console.error("Failed to add reaction", err);
             }
         }
-    });
+    };
+
+document.querySelectorAll('.reaction-emoji').forEach(el => {
+    el.addEventListener('click', handleEmojiAction);
+    el.addEventListener('touchstart', handleEmojiAction);
 });
