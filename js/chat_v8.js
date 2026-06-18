@@ -2665,6 +2665,13 @@ document.querySelectorAll('.reaction-emoji').forEach(el => {
                         [currentUser.userId]: emoji
                     }
                 }, { merge: true });
+
+                // Update chats collection to trigger native notification
+                await setDoc(doc(db, "chats", activeChatId), {
+                    lastMessage: `Reacted ${emoji} to a message`,
+                    lastMessageSenderId: currentUser.userId,
+                    lastMessageTime: serverTimestamp()
+                }, { merge: true });
             } catch (err) {
                 console.error("Reaction failed:", err);
             }
