@@ -2701,6 +2701,86 @@ if (btnCancelReply) {
     });
 }
 
+
+// --- Delete Message Logic ---
+const deleteModalOverlay = document.getElementById('delete-modal-overlay');
+const btnShowDeleteModal = document.getElementById('btn-show-delete-modal');
+const btnDeleteEveryone = document.getElementById('btn-delete-everyone');
+const btnDeleteMe = document.getElementById('btn-delete-me');
+const btnDeleteCancel = document.getElementById('btn-delete-cancel');
+
+let messageToDelete = null;
+
+if (btnShowDeleteModal) {
+    btnShowDeleteModal.addEventListener('click', async () => {
+        if (reactionOverlay) reactionOverlay.style.display = 'none';
+        
+        if (currentReactionMsgId && activeChatId) {
+            // Find message sender to determine if we can delete for everyone
+            try {
+                const msgRef = doc(db, "messages", currentReactionMsgId);
+                const msgSnap = await getDoc(msgRef);
+                if (msgSnap.exists()) {
+                    const data = msgSnap.data();
+                    messageToDelete = currentReactionMsgId;
+                    
+                    if (data.senderId === currentUser.userId) {
+                        btnDeleteEveryone.style.display = 'block';
+                    } else {
+                        btnDeleteEveryone.style.display = 'none';
+                    }
+                    deleteModalOverlay.style.display = 'flex';
+                }
+            } catch (err) {
+                console.error("Failed to fetch message for deletion", err);
+            }
+        }
+    });
+}
+
+if (btnDeleteCancel) {
+    btnDeleteCancel.addEventListener('click', () => {
+        deleteModalOverlay.style.display = 'none';
+        messageToDelete = null;
+    });
+}
+
+if (btnDeleteEveryone) {
+    btnDeleteEveryone.addEventListener('click', async () => {
+        if (!messageToDelete) return;
+        deleteModalOverlay.style.display = 'none';
+        try {
+            // "Delete for all then delete from database aswell"
+            const msgRef = doc(db, "messages", messageToDelete);
+            await deleteDoc(msgRef);
+        } catch (err) {
+            console.error("Delete for everyone failed", err);
+            alert("Failed to delete message.");
+        } finally {
+            messageToDelete = null;
+        }
+    });
+}
+
+if (btnDeleteMe) {
+    btnDeleteMe.addEventListener('click', async () => {
+        if (!messageToDelete) return;
+        deleteModalOverlay.style.display = 'none';
+        try {
+            const msgRef = doc(db, "messages", messageToDelete);
+            await setDoc(msgRef, {
+                deletedFor: { [currentUser.userId]: true }
+            }, { merge: true });
+        } catch (err) {
+            console.error("Delete for me failed", err);
+            alert("Failed to delete message.");
+        } finally {
+            messageToDelete = null;
+        }
+    });
+}
+// --- End Delete Message Logic ---
+
 window.initiateReply = function(msgId, senderId, text) {
     replyToMessage = { msgId, senderId, text };
     if (replySender) replySender.innerText = (senderId === (currentUser ? currentUser.userId : '')) ? 'You' : (() => { const u = typeof allUsers !== 'undefined' ? allUsers.find(x => x.userId === senderId) : null; return u ? u.fullName : 'User'; })();
