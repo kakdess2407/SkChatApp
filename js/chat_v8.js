@@ -579,7 +579,7 @@ const renderMessage = (msg) => {
     let contentHtml = '';
     
     if (msg.replyTo) {
-        const senderName = msg.replyTo.senderId === currentUser.userId ? 'You' : 'User';
+        const senderName = msg.replyTo.senderId === currentUser.userId ? 'You' : (() => { const u = typeof allUsers !== 'undefined' ? allUsers.find(x => x.userId === msg.replyTo.senderId) : null; return u ? u.fullName : 'User'; })();
         contentHtml += `
             <div class="message-reply-block">
                 <div class="message-reply-sender">${senderName}</div>
@@ -2548,7 +2548,7 @@ if (btnCancelReply) {
 
 window.initiateReply = function(msgId, senderId, text) {
     replyToMessage = { msgId, senderId, text };
-    if (replySender) replySender.innerText = (senderId === (currentUser ? currentUser.userId : '')) ? 'You' : 'User';
+    if (replySender) replySender.innerText = (senderId === (currentUser ? currentUser.userId : '')) ? 'You' : (() => { const u = typeof allUsers !== 'undefined' ? allUsers.find(x => x.userId === senderId) : null; return u ? u.fullName : 'User'; })();
     if (replyText) replyText.innerText = text;
     if (replyBanner) replyBanner.style.display = 'block';
     const msgInput = document.getElementById('message-input');
