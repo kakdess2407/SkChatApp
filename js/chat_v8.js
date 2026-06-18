@@ -2758,8 +2758,12 @@ window.showReactionPicker = function(x, y, msgId) {
     currentReactionMsgId = msgId;
     if (reactionOverlay) {
         reactionOverlay.style.display = 'flex';
-        reactionOverlay.style.left = `${Math.min(x, window.innerWidth - 250)}px`;
-        reactionOverlay.style.top = `${Math.max(y - 60, 10)}px`;
+        // Wait for next frame to get accurate width
+        setTimeout(() => {
+            const overlayWidth = reactionOverlay.offsetWidth || 300;
+            reactionOverlay.style.left = `${Math.max(10, Math.min(x - (overlayWidth/2), window.innerWidth - overlayWidth - 10))}px`;
+            reactionOverlay.style.top = `${Math.max(y - 60, 10)}px`;
+        }, 0);
     }
 };
 
