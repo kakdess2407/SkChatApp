@@ -2634,6 +2634,17 @@ if (chatMsgsContainer) {
             if (msgId) window.showReactionPicker(e.clientX, e.clientY, msgId);
         }
     });
+
+    chatMsgsContainer.addEventListener('dblclick', (e) => {
+        const msgEl = e.target.closest('.message');
+        if (msgEl && !msgEl.classList.contains('message-call-log')) {
+            const msgId = msgEl.getAttribute('data-id');
+            const senderId = msgEl.getAttribute('data-sender');
+            const textEl = msgEl.querySelector('.message-text');
+            const text = textEl ? textEl.innerText : (msgEl.querySelector('img') ? 'Image' : 'Document');
+            if (msgId) window.initiateReply(msgId, senderId, text);
+        }
+    });
 }
 
 document.addEventListener('click', (e) => {
@@ -2647,11 +2658,13 @@ document.querySelectorAll('.reaction-emoji').forEach(el => {
         const emoji = e.target.getAttribute('data-emoji');
         if (reactionOverlay) reactionOverlay.style.display = 'none';
         
-        if (currentReactionMsgId && currentChatId) {
+        if (currentReactionMsgId && activeChatId) {
             try {
-                await updateDoc(doc(db, "messages", currentReactionMsgId), {
-                    [`reactions.${currentUser.userId}`]: emoji
-                });
+                await setDoc(doc(db, "messages", currentReactionMsgId), {
+                    reactions: {
+                        [currentUser.userId]: emoji
+                    }
+                }, { merge: true });
             } catch (err) {
                 console.error("Reaction failed:", err);
             }
