@@ -66,6 +66,14 @@ const btnSend = document.getElementById('btn-send');
 const searchUsers = document.getElementById('search-users');
 const btnClearChat = document.getElementById('btn-clear-chat');
 const btnBlockUser = document.getElementById('btn-block-user');
+const btnBack = document.getElementById('btn-back');
+
+// ImgBB API Key
+const IMGBB_API_KEY = '114dfeeeb0e7a925c0811041e6e9cee4';
+
+// Attachment elements
+const btnAttach = document.getElementById('btn-attach');
+const imageUploadInput = document.getElementById('image-upload-input');
 
 // State
 let activeChatUserId = null;
@@ -719,6 +727,54 @@ const sendMessage = async (text = '', fileUrl = null, fileType = null) => {
 if (btnSend) {
     btnSend.addEventListener('click', () => sendMessage(messageInput.value));
 }
+
+if (btnAttach && imageUploadInput) {
+    btnAttach.addEventListener('click', () => {
+        imageUploadInput.click();
+    });
+
+    imageUploadInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Visual feedback
+        const oldPlaceholder = messageInput.placeholder;
+        messageInput.placeholder = "Uploading image...";
+        messageInput.disabled = true;
+        btnSend.disabled = true;
+        btnAttach.disabled = true;
+
+        try {
+            const formData = new FormData();
+            formData.append('image', file);
+
+            const response = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                const imageUrl = data.data.url;
+                // Send the image message
+                await sendMessage('', imageUrl, file.type);
+            } else {
+                alert("Upload failed: " + data.error.message);
+            }
+        } catch (error) {
+            console.error("Upload error:", error);
+            alert("Upload failed. Please check console.");
+        } finally {
+            // Restore UI
+            messageInput.placeholder = oldPlaceholder;
+            messageInput.disabled = false;
+            btnSend.disabled = false;
+            btnAttach.disabled = false;
+            imageUploadInput.value = ''; // Reset input
+        }
+    });
+}
+
 
 if (messageInput) {
     messageInput.addEventListener('keypress', (e) => {
