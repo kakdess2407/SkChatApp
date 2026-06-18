@@ -1,5 +1,5 @@
 import { db, auth } from './firebase-config.js?v=5';
-import { collection, query, where, onSnapshot, addDoc, serverTimestamp, orderBy, getDocs, getDoc, doc, deleteDoc, updateDoc, setDoc, or } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { collection, query, where, onSnapshot, addDoc, serverTimestamp, orderBy, getDocs, getDoc, doc, deleteDoc, updateDoc, setDoc, or, deleteField } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 // Check Auth
@@ -2660,18 +2660,35 @@ document.querySelectorAll('.reaction-emoji').forEach(el => {
         
         if (currentReactionMsgId && activeChatId) {
             try {
-                await setDoc(doc(db, "messages", currentReactionMsgId), {
-                    reactions: {
-                        [currentUser.userId]: emoji
+                const msgRef = doc(db, "messages", currentReactionMsgId);
+                const msgSnap = await getDoc(msgRef);
+                
+                let isRemoving = false;
+                if (msgSnap.exists()) {
+                    const data = msgSnap.data();
+                    if (data.reactions && data.reactions[currentUser.userId] === emoji) {
+                        // User already reacted with this emoji, so toggle it off
+                        isRemoving = true;
+                        await updateDoc(msgRef, {
+                            [`reactions.${currentUser.userId}`]: deleteField()
+                        });
                     }
-                }, { merge: true });
+                }
+                
+                if (!isRemoving) {
+                    await setDoc(msgRef, {
+                        reactions: {
+                            [currentUser.userId]: emoji
+                        }
+                    }, { merge: true });
 
-                // Update chats collection to trigger native notification
-                await setDoc(doc(db, "chats", activeChatId), {
-                    lastMessage: `Reacted ${emoji} to a message`,
-                    lastMessageSenderId: currentUser.userId,
-                    lastMessageTime: serverTimestamp()
-                }, { merge: true });
+                    // Update chats collection to trigger native notification
+                    await setDoc(doc(db, "chats", activeChatId), {
+                        lastMessage: `Reacted ${emoji} to a message`,
+                        lastMessageSenderId: currentUser.userId,
+                        lastMessageTime: serverTimestamp()
+                    }, { merge: true });
+                }
             } catch (err) {
                 console.error("Reaction failed:", err);
             }
