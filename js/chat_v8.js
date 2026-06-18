@@ -504,7 +504,9 @@ const loadMessages = () => {
         
         const messages = [];
         snapshot.forEach((doc) => {
-            messages.push(doc.data());
+            let m = doc.data();
+            m.id = doc.id;
+            messages.push(m);
         });
         
         // Sort messages locally by timestamp
@@ -571,8 +573,20 @@ const renderMessage = (msg) => {
     }
     
     div.className = `message ${isMe ? 'message-out' : 'message-in'}`;
+    div.setAttribute('data-id', msg.id || '');
+    div.setAttribute('data-sender', msg.senderId || '');
     
     let contentHtml = '';
+    
+    if (msg.replyTo) {
+        const senderName = msg.replyTo.senderId === currentUser.userId ? 'You' : 'User';
+        contentHtml += `
+            <div class="message-reply-block">
+                <div class="message-reply-sender">${senderName}</div>
+                <div class="message-reply-text">${msg.replyTo.text}</div>
+            </div>
+        `;
+    }
     
     if (msg.fileUrl) {
         if (msg.fileType && msg.fileType.startsWith('image/')) {
@@ -589,6 +603,15 @@ const renderMessage = (msg) => {
     
     if (msg.text) {
         contentHtml += `<span class="message-text">${msg.text}</span>`;
+    }
+    
+    if (msg.reactions && Object.keys(msg.reactions).length > 0) {
+        const emojis = [...new Set(Object.values(msg.reactions))]; // Unique emojis
+        contentHtml += `
+            <div class="message-reactions">
+                ${emojis.join(' ')} <span style="font-size: 10px; margin-left: 2px;">${Object.values(msg.reactions).length > 1 ? Object.values(msg.reactions).length : ''}</span>
+            </div>
+        `;
     }
     
     contentHtml += `<span class="message-time">
@@ -617,14 +640,20 @@ const sendMessage = async (text = '', fileUrl = null, fileType = null) => {
     messageInput.value = '';
 
     try {
-        await addDoc(collection(db, "messages"), {
+        const payload = {
             chatId: activeChatId,
             senderId: currentUser.userId,
             text: text.trim(),
             fileUrl: fileUrl,
             fileType: fileType,
             timestamp: serverTimestamp()
-        });
+        };
+        if (replyToMessage) {
+            payload.replyTo = replyToMessage;
+        }
+        await addDoc(collection(db, "messages"), payload);
+        
+        if (typeof btnCancelReply !== 'undefined' && btnCancelReply) btnCancelReply.click();
         
         const isNewChat = !userChats.has(activeChatId);
         const chatData = userChats.get(activeChatId);
@@ -2315,6 +2344,12 @@ if (navTabs) {
 
 let callsUnsubscribe = null;
 let isCallsEditMode = false;
+let replyToMessage = null;
+let touchStartX = 0;
+let touchStartY = 0;
+let activeMessageElement = null;
+let longPressTimer = null;
+let currentReactionMsgId = null;
 
 const fetchCallHistory = () => {
     if (callsUnsubscribe) return; // Already listening
@@ -2494,3 +2529,132 @@ window.onNativePipModeChanged = function(isInPipMode) {
     }
 };
 window.hangupCall = hangupCall;
+
+
+// ---- Reply and Reaction Logic ----
+
+const replyBanner = document.getElementById('reply-preview-banner');
+const replySender = document.getElementById('reply-preview-sender');
+const replyText = document.getElementById('reply-preview-text');
+const btnCancelReply = document.getElementById('btn-cancel-reply');
+const reactionOverlay = document.getElementById('reaction-picker-overlay');
+
+if (btnCancelReply) {
+    btnCancelReply.addEventListener('click', () => {
+        replyToMessage = null;
+        if (replyBanner) replyBanner.style.display = 'none';
+    });
+}
+
+window.initiateReply = function(msgId, senderId, text) {
+    replyToMessage = { msgId, senderId, text };
+    if (replySender) replySender.innerText = (senderId === (currentUser ? currentUser.userId : '')) ? 'You' : 'User';
+    if (replyText) replyText.innerText = text;
+    if (replyBanner) replyBanner.style.display = 'block';
+    const msgInput = document.getElementById('message-input');
+    if (msgInput) msgInput.focus();
+};
+
+window.showReactionPicker = function(x, y, msgId) {
+    currentReactionMsgId = msgId;
+    if (reactionOverlay) {
+        reactionOverlay.style.display = 'flex';
+        reactionOverlay.style.left = `${Math.min(x, window.innerWidth - 250)}px`;
+        reactionOverlay.style.top = `${Math.max(y - 60, 10)}px`;
+    }
+};
+
+const chatMsgsContainer = document.getElementById('chat-messages-container');
+if (chatMsgsContainer) {
+    chatMsgsContainer.addEventListener('touchstart', (e) => {
+        const msgEl = e.target.closest('.message');
+        if (!msgEl || msgEl.classList.contains('message-call-log')) return;
+        
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        activeMessageElement = msgEl;
+        
+        const msgId = msgEl.getAttribute('data-id');
+        if (msgId) {
+            longPressTimer = setTimeout(() => {
+                window.showReactionPicker(e.touches[0].clientX, e.touches[0].clientY, msgId);
+                activeMessageElement = null; 
+            }, 500); 
+        }
+    }, {passive: true});
+
+    chatMsgsContainer.addEventListener('touchmove', (e) => {
+        if (!activeMessageElement) return;
+        
+        const touchX = e.touches[0].clientX;
+        const touchY = e.touches[0].clientY;
+        
+        if (Math.abs(touchX - touchStartX) > 10 || Math.abs(touchY - touchStartY) > 10) {
+            clearTimeout(longPressTimer);
+        }
+        
+        const diffX = touchX - touchStartX;
+        const diffY = Math.abs(touchY - touchStartY);
+        
+        if (diffX > 0 && diffX > diffY) {
+            const translate = Math.min(diffX, 80);
+            activeMessageElement.style.transform = `translateX(${translate}px)`;
+            if (translate > 50) {
+                activeMessageElement.classList.add('swipe-reply-active');
+            } else {
+                activeMessageElement.classList.remove('swipe-reply-active');
+            }
+        }
+    }, {passive: true});
+
+    chatMsgsContainer.addEventListener('touchend', (e) => {
+        clearTimeout(longPressTimer);
+        
+        if (activeMessageElement) {
+            activeMessageElement.style.transform = '';
+            if (activeMessageElement.classList.contains('swipe-reply-active')) {
+                activeMessageElement.classList.remove('swipe-reply-active');
+                
+                const msgId = activeMessageElement.getAttribute('data-id');
+                const senderId = activeMessageElement.getAttribute('data-sender');
+                const textEl = activeMessageElement.querySelector('.message-text');
+                const text = textEl ? textEl.innerText : (activeMessageElement.querySelector('img') ? 'Image' : 'Document');
+                
+                window.initiateReply(msgId, senderId, text);
+            }
+            activeMessageElement = null;
+        }
+    });
+
+    chatMsgsContainer.addEventListener('contextmenu', (e) => {
+        const msgEl = e.target.closest('.message');
+        if (msgEl && !msgEl.classList.contains('message-call-log')) {
+            e.preventDefault();
+            const msgId = msgEl.getAttribute('data-id');
+            if (msgId) window.showReactionPicker(e.clientX, e.clientY, msgId);
+        }
+    });
+}
+
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.reaction-picker-overlay') && !e.target.closest('.message')) {
+        if (reactionOverlay) reactionOverlay.style.display = 'none';
+    }
+});
+
+document.querySelectorAll('.reaction-emoji').forEach(el => {
+    el.addEventListener('click', async (e) => {
+        const emoji = e.target.getAttribute('data-emoji');
+        if (reactionOverlay) reactionOverlay.style.display = 'none';
+        
+        if (currentReactionMsgId && currentChatId) {
+            try {
+                await updateDoc(doc(db, "messages", currentReactionMsgId), {
+                    [`reactions.${currentUser.userId}`]: emoji
+                });
+            } catch (err) {
+                console.error("Reaction failed:", err);
+            }
+        }
+    });
+});

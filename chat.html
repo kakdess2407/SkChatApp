@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MyChatApp Web</title>
     <link rel="stylesheet" href="css/style.css?v=4">
-    <link rel="stylesheet" href="css/chat.css?v=4">
+    <link rel="stylesheet" href="css/chat.css?v=12">
     <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -116,14 +116,33 @@
                     <!-- Messages will be populated here -->
                 </div>
 
-                <div class="chat-input-container">
-                    <input type="text" id="message-input" placeholder="Type a message" autocomplete="off">
-                    <button class="btn-send" id="btn-send">
-                        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" class="icon"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                    </button>
+                <div class="chat-input-container" style="flex-direction: column;">
+                    <div id="reply-preview-banner" style="display: none; width: 100%; background: var(--wa-bg-light); border-left: 4px solid var(--wa-green-dark); padding: 8px 12px; margin-bottom: 8px; border-radius: 8px; position: relative;">
+                        <span id="reply-preview-sender" style="color: var(--wa-green-dark); font-weight: 600; font-size: 13px; display: block;"></span>
+                        <span id="reply-preview-text" style="color: var(--wa-text-light); font-size: 13px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90%;"></span>
+                        <button id="btn-cancel-reply" style="position: absolute; right: 10px; top: 10px; background: none; border: none; color: var(--wa-text-light); cursor: pointer; padding: 5px;">
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                    </div>
+                    <div style="display: flex; width: 100%; align-items: center;">
+                        <input type="text" id="message-input" placeholder="Type a message" autocomplete="off">
+                        <button class="btn-send" id="btn-send">
+                            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" class="icon"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Reaction Picker Overlay -->
+    <div id="reaction-picker-overlay" class="reaction-picker-overlay" style="display: none; position: absolute; z-index: 1000; background: var(--wa-bg); border-radius: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.15); padding: 5px 10px; flex-direction: row; gap: 10px;">
+        <span class="reaction-emoji" data-emoji="👍">👍</span>
+        <span class="reaction-emoji" data-emoji="❤️">❤️</span>
+        <span class="reaction-emoji" data-emoji="😂">😂</span>
+        <span class="reaction-emoji" data-emoji="😮">😮</span>
+        <span class="reaction-emoji" data-emoji="😢">😢</span>
+        <span class="reaction-emoji" data-emoji="🙏">🙏</span>
     </div>
 
 
@@ -308,6 +327,6 @@
     </div>
 
     <!-- Firebase SDK will be loaded in chat.js -->
-    <script type="module" src="js/chat_v8.js?v=11"></script>
+    <script type="module" src="js/chat_v8.js?v=12"></script>
 </body>
 </html>
