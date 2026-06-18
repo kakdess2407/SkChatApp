@@ -13,6 +13,14 @@ if (currentUser && window.AndroidAuth) {
     window.AndroidAuth.startCallListener(currentUser.userId);
 }
 
+// Immediately set user online upon opening the web app
+if (currentUser && currentUser.docId) {
+    updateDoc(doc(db, "users", currentUser.docId), {
+        status: 'online',
+        lastSeen: serverTimestamp()
+    }).catch(e => console.error("Could not set initial online status:", e));
+}
+
 // Real-time Admin Approval Check
 window.openChatFromNative = function(userId) {
     if (typeof allUsers !== 'undefined' && allUsers.length > 0) {
