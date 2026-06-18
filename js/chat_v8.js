@@ -75,6 +75,50 @@ const IMGBB_API_KEY = '114dfeeeb0e7a925c0811041e6e9cee4';
 const btnAttach = document.getElementById('btn-attach');
 const imageUploadInput = document.getElementById('image-upload-input');
 
+
+// Lightbox Logic
+const imageLightbox = document.getElementById('image-lightbox');
+const lightboxImg = document.getElementById('lightbox-img');
+const btnCloseLightbox = document.getElementById('btn-close-lightbox');
+
+window.openLightbox = function(url) {
+    if (!imageLightbox) return;
+    lightboxImg.src = url;
+    imageLightbox.style.display = 'flex';
+    history.pushState({ lightbox: true }, '');
+};
+
+window.closeLightbox = function() {
+    if (!imageLightbox) return;
+    imageLightbox.style.display = 'none';
+    lightboxImg.src = '';
+};
+
+if (btnCloseLightbox) {
+    btnCloseLightbox.addEventListener('click', () => {
+        history.back(); // This will trigger popstate and close the lightbox
+    });
+}
+
+window.addEventListener('popstate', (e) => {
+    if (imageLightbox && imageLightbox.style.display === 'flex') {
+        window.closeLightbox();
+    } else if (activeChatId) {
+        // If chat is open, close chat
+        activeChatId = null;
+        activeChatUserId = null;
+        if (currentMessagesUnsubscribe) {
+            currentMessagesUnsubscribe();
+            currentMessagesUnsubscribe = null;
+        }
+        document.querySelector('.chat-area').classList.remove('mobile-active');
+        // Notify native
+        if (window.AndroidAuth) {
+            window.AndroidAuth.setChatOpen(false);
+        }
+    }
+});
+
 // State
 let activeChatUserId = null;
 let activeChatId = null;
@@ -603,7 +647,7 @@ const renderMessage = (msg) => {
         return;
     }
     
-    div.className = `message ${isMe ? 'message-out' : 'message-in'}`;
+    div.className = `message ${isMe ? 'message-out' : 'message-in'} ${msg.fileUrl ? 'message-has-image' : ''}`;
     div.setAttribute('data-id', msg.id || '');
     div.setAttribute('data-sender', msg.senderId || '');
     
@@ -621,7 +665,7 @@ const renderMessage = (msg) => {
     
     if (msg.fileUrl) {
         if (msg.fileType && msg.fileType.startsWith('image/')) {
-            contentHtml = `<img src="${msg.fileUrl}" class="message-image" onclick="window.open('${msg.fileUrl}', '_blank')">`;
+            contentHtml = `<img src="${msg.fileUrl}" class="message-image">`;
         } else {
             contentHtml = `
                 <a href="${msg.fileUrl}" target="_blank" class="message-file">
@@ -2732,8 +2776,25 @@ if (chatMsgsContainer) {
                 const text = textEl ? textEl.innerText : (activeMessageElement.querySelector('img') ? 'Image' : 'Document');
                 
                 window.initiateReply(msgId, senderId, text);
+            } else {
+                // Short tap detection!
+                const touchX = e.changedTouches[0].clientX;
+                const touchY = e.changedTouches[0].clientY;
+                if (Math.abs(touchX - touchStartX) < 10 && Math.abs(touchY - touchStartY) < 10) {
+                    // It was a tap, not a swipe
+                    if (e.target.tagName === 'IMG' && e.target.classList.contains('message-image')) {
+                        window.openLightbox(e.target.src);
+                    }
+                }
             }
             activeMessageElement = null;
+        }
+    });
+
+    // Also add desktop click support
+    chatMsgsContainer.addEventListener('click', (e) => {
+        if (e.target.tagName === 'IMG' && e.target.classList.contains('message-image')) {
+            window.openLightbox(e.target.src);
         }
     });
 

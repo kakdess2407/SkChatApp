@@ -1349,3 +1349,33 @@ body.native-pip-mode #local-video {
     margin-bottom: 15px; /* Extra margin for reactions */
 }
 
+
+
+/* Image Bubble WhatsApp Styling */
+.message-has-image {
+    padding: 3px !important;
+    max-width: 75% !important;
+    background-color: transparent !important;
+}
+
+.message-has-image::before {
+    display: none !important;
+}
+
+.message-has-image .message-image {
+    width: 280px;
+    max-width: 100%;
+    margin: 0 !important;
+    border-radius: 8px !important;
+    display: block;
+}
+
+.message-has-image .message-time {
+    background: rgba(0, 0, 0, 0.45);
+    color: white !important;
+    padding: 3px 6px;
+    border-radius: 12px;
+    bottom: 8px !important;
+    right: 8px !important;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.5);
+}
