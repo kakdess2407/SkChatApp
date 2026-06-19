@@ -14,6 +14,18 @@
         .desktop-only.nav-tab.active { color: var(--wa-green-dark); }
         #settings-biometric-toggle:checked + .slider { background-color: var(--wa-green-light); } + .slider { background-color: var(--wa-green-light); }
         #settings-biometric-toggle:checked + .slider .slider-knob { transform: translateX(20px); }
+    
+        .status-ring {
+            border: 3px solid var(--wa-green-light);
+            padding: 2px;
+            border-radius: 50%;
+        }
+        .status-ring-seen {
+            border: 3px solid var(--wa-border);
+            padding: 2px;
+            border-radius: 50%;
+        }
+
     </style>
 
 </head>
@@ -79,24 +91,26 @@
             <!-- Bottom Navigation Menu -->
             
             <!-- Status Sidebar -->
-            <div class="sidebar-content" id="sidebar-status" style="display: none; flex: 1; overflow-y: auto;">
-                <div class="status-header" style="padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--wa-border);">
-                    <h3 style="margin: 0; font-size: 18px;">Status</h3>
+            <div class="sidebar-content" id="sidebar-status" style="display: none; flex: 1; overflow-y: auto; background: var(--wa-bg-light);">
+                <div class="status-header" style="padding: 20px 15px 15px 15px; display: flex; justify-content: space-between; align-items: center;">
+                    <h2 style="margin: 0; font-size: 22px; font-weight: 600; color: var(--wa-text-dark);">Status</h2>
                 </div>
                 
                 <!-- My Status -->
                 <div class="status-item" id="btn-add-status" style="display: flex; align-items: center; padding: 12px 15px; cursor: pointer; transition: background-color 0.2s;">
-                    <div style="position: relative; width: 45px; height: 45px; margin-right: 15px;">
+                    <div style="position: relative; width: 48px; height: 48px; margin-right: 15px;">
                         <img id="my-status-pic" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
-                        <div style="position: absolute; bottom: 0; right: 0; background: var(--wa-green-light); color: white; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 14px; border: 2px solid white;">+</div>
+                        <div style="position: absolute; bottom: 0; right: 0; background: var(--wa-green-light); color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 2px solid white;">+</div>
                     </div>
                     <div style="flex: 1;">
                         <div style="font-weight: 500; font-size: 16px; color: var(--wa-text-dark);">My status</div>
-                        <div style="font-size: 13px; color: var(--wa-text-light);">Tap to add status update</div>
+                        <div style="font-size: 13px; color: var(--wa-text-light); margin-top: 2px;">Click to add status update</div>
                     </div>
                 </div>
 
-                <div style="padding: 8px 15px; font-size: 13px; font-weight: 600; color: var(--wa-text-light); text-transform: uppercase;">Recent updates</div>
+                <div style="height: 10px; background: var(--wa-bg); border-top: 1px solid var(--wa-border); border-bottom: 1px solid var(--wa-border); margin: 10px 0;"></div>
+
+                <div style="padding: 10px 15px 5px 15px; font-size: 14px; font-weight: 500; color: var(--wa-green-light); text-transform: uppercase;">Recent updates</div>
                 
                 <div id="status-list">
                     <!-- Status items will be populated here -->
@@ -446,7 +460,7 @@
     </div>
 
     <!-- Firebase SDK will be loaded in chat.js -->
-    <script type="module" src="js/chat_v8.js?v=50"></script>
+    <script type="module" src="js/chat_v8.js?v=51"></script>
 
     <!-- Status Upload Modal -->
     <div id="status-upload-modal" class="modal-overlay" style="z-index: 10005; background: black; flex-direction: column;">
@@ -539,5 +553,19 @@
         </div>
     </div>
 
+
+    <!-- Avatar Action Modal -->
+    <div id="avatar-action-modal" class="modal-overlay" style="z-index: 10006; display: none;">
+        <div class="modal-content" style="max-width: 320px; width: 85%; padding: 0; border-radius: 12px; overflow: hidden;">
+            <div style="padding: 20px; text-align: center; border-bottom: 1px solid var(--wa-border);">
+                <img id="avatar-action-pic" src="" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin-bottom: 15px;">
+                <h3 id="avatar-action-name" style="margin: 0; font-size: 18px; color: var(--wa-text-dark);">User Name</h3>
+            </div>
+            <div style="display: flex; flex-direction: column;">
+                <button id="btn-action-view-status" style="padding: 15px; background: none; border: none; border-bottom: 1px solid var(--wa-border); font-size: 16px; color: var(--wa-green-dark); cursor: pointer; font-weight: 500; transition: background 0.2s;">View Status</button>
+                <button id="btn-action-view-profile" style="padding: 15px; background: none; border: none; font-size: 16px; color: var(--wa-text-dark); cursor: pointer; font-weight: 500; transition: background 0.2s;">View Profile</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

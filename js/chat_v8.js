@@ -1,3 +1,53 @@
+
+// Global Status State
+window.globalGroupedStatuses = {};
+window.globalMyStatuses = [];
+
+window.hasActiveStatus = (userId) => {
+    if (currentUser && userId === currentUser.userId) {
+        return window.globalMyStatuses.length > 0;
+    }
+    return window.globalGroupedStatuses[userId] && window.globalGroupedStatuses[userId].length > 0;
+};
+
+window.handleAvatarClick = (userId, profilePicUrl, fullName, e) => {
+    if (e) e.stopPropagation();
+    
+    const isMyProfile = currentUser && userId === currentUser.userId;
+    
+    if (window.hasActiveStatus(userId)) {
+        // Open Action Modal
+        const modal = document.getElementById('avatar-action-modal');
+        document.getElementById('avatar-action-pic').src = profilePicUrl || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+        document.getElementById('avatar-action-name').innerText = isMyProfile ? 'My Status' : (fullName || 'User');
+        
+        document.getElementById('btn-action-view-profile').onclick = () => {
+            modal.style.display = 'none';
+            if(window.openProfileViewer) window.openProfileViewer(profilePicUrl, isMyProfile);
+        };
+        
+        document.getElementById('btn-action-view-status').onclick = () => {
+            modal.style.display = 'none';
+            if (isMyProfile) {
+                openStatusViewer(userId, window.globalMyStatuses);
+            } else {
+                const userObj = allUsers.find(u => u.userId === userId) || { fullName: fullName, profilePic: profilePicUrl };
+                openStatusViewer(userId, window.globalGroupedStatuses[userId], userObj);
+            }
+        };
+        
+        modal.style.display = 'flex';
+        
+        // Close modal when clicking outside
+        modal.onclick = (e) => {
+            if (e.target === modal) modal.style.display = 'none';
+        };
+    } else {
+        // No status, just open profile
+        if(window.openProfileViewer) window.openProfileViewer(profilePicUrl, isMyProfile);
+    }
+};
+
 import { db, auth } from './firebase-config.js?v=5';
 import { collection, query, where, onSnapshot, addDoc, serverTimestamp, orderBy, getDocs, getDoc, doc, deleteDoc, updateDoc, setDoc, or, deleteField } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -305,7 +355,7 @@ const renderUsers = (users) => {
         div.onclick = () => selectUser(user);
         
         div.innerHTML = `
-            <img src="${user.profilePic || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" class="avatar" style="cursor: pointer;" onclick="event.stopPropagation(); if(window.openProfileViewer) window.openProfileViewer(this.src, false)">
+            <img src="${user.profilePic || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" class="avatar ${window.hasActiveStatus(user.userId) ? 'status-ring' : ''}" style="cursor: pointer;" onclick="window.handleAvatarClick('${user.userId}', this.src, '${user.fullName.replace(/'/g, "\'")}', event)">
             <div class="chat-item-info">
                 <div class="chat-item-header">
                     <span class="chat-item-name">${user.fullName}</span>
@@ -609,6 +659,14 @@ const selectUser = (user) => {
     const activeUserPic = document.getElementById('active-user-pic');
     if (activeUserPic) {
         activeUserPic.src = user.profilePic || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+    if (window.hasActiveStatus(user.userId)) {
+        activeUserPic.classList.add('status-ring');
+    } else {
+        activeUserPic.classList.remove('status-ring');
+    }
+    
+    // Bind click to the new handleAvatarClick
+    activeUserPic.onclick = (e) => window.handleAvatarClick(user.userId, activeUserPic.src, user.fullName, e);
     }
     
     // Mobile transition (evaluated dynamically)
@@ -3308,6 +3366,13 @@ const renderStatusList = () => {
             groupedStatuses[status.userId].push(status);
         }
     });
+    
+    // Export globally for chat list
+    window.globalGroupedStatuses = groupedStatuses;
+    window.globalMyStatuses = myStatuses;
+    if (typeof renderChatList === 'function') renderChatList();
+    if (activeChatUserId && typeof updateChatUIState === 'function') updateChatUIState(allUsers.find(u => u.userId === activeChatUserId));
+
     
     // Update My Status UI
     const myStatusRing = btnAddStatus.querySelector('div[style*="border-radius: 50%"]');
