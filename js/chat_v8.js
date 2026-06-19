@@ -167,6 +167,13 @@ window.addEventListener('popstate', (e) => {
         return;
     }
 
+    // 3.5 Profile Viewer Overlay
+    const profileViewerOverlay = document.getElementById('profile-viewer-overlay');
+    if (profileViewerOverlay && profileViewerOverlay.style.display === 'flex') {
+        profileViewerOverlay.style.display = 'none';
+        return;
+    }
+
     // 4. Image Lightbox
     if (imageLightbox && imageLightbox.style.display === 'flex') {
         window.closeLightbox();
@@ -298,7 +305,7 @@ const renderUsers = (users) => {
         div.onclick = () => selectUser(user);
         
         div.innerHTML = `
-            <img src="${user.profilePic || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" class="avatar">
+            <img src="${user.profilePic || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" class="avatar" style="cursor: pointer;" onclick="event.stopPropagation(); if(window.openProfileViewer) window.openProfileViewer(this.src, false)">
             <div class="chat-item-info">
                 <div class="chat-item-header">
                     <span class="chat-item-name">${user.fullName}</span>
@@ -1242,7 +1249,11 @@ if (btnCancelSettings) btnCancelSettings.addEventListener('click', closeSettings
 // Avatar Edit Trigger
 if (settingsAvatarWrapper && settingsProfilePic) {
     settingsAvatarWrapper.addEventListener('click', () => {
-        settingsProfilePic.click();
+        if(window.openProfileViewer) {
+            window.openProfileViewer(settingsAvatarPreview.src, true);
+        } else {
+            settingsProfilePic.click();
+        }
     });
     
     settingsProfilePic.addEventListener('change', (e) => {
@@ -3136,3 +3147,40 @@ window.promptBiometricIfLocked = () => {
         }
     }
 };
+
+// ==========================================
+// Profile Viewer Modal Logic
+// ==========================================
+window.openProfileViewer = (src, isMyProfile) => {
+    const overlay = document.getElementById('profile-viewer-overlay');
+    const img = document.getElementById('profile-viewer-img');
+    const btnEdit = document.getElementById('btn-edit-profile-viewer');
+    
+    if (overlay && img) {
+        img.src = src;
+        if (btnEdit) {
+            btnEdit.style.display = isMyProfile ? 'block' : 'none';
+        }
+        overlay.style.display = 'flex';
+        history.pushState({ view: 'profileViewer' }, '', '#profileViewer');
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    const overlay = document.getElementById('profile-viewer-overlay');
+    const btnClose = document.getElementById('btn-close-profile-viewer');
+    const btnEdit = document.getElementById('btn-edit-profile-viewer');
+    const settingsProfilePic = document.getElementById('settings-profile-pic');
+    
+    if (btnClose) {
+        btnClose.addEventListener('click', () => {
+            history.back(); // triggers popstate which closes it
+        });
+    }
+    
+    if (btnEdit && settingsProfilePic) {
+        btnEdit.addEventListener('click', () => {
+            settingsProfilePic.click();
+        });
+    }
+});
