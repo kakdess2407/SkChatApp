@@ -1,6 +1,6 @@
 
 
-import { db, auth } from './firebase-config.js?v=59';
+import { db, auth } from './firebase-config.js?v=60';
 import { collection, query, where, onSnapshot, addDoc, serverTimestamp, orderBy, getDocs, getDoc, doc, deleteDoc, updateDoc, setDoc, or, deleteField } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -66,8 +66,15 @@ window.handleAvatarClick = (userId, e) => {
             document.getElementById('avatar-action-pic').src = profilePicUrl || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
             document.getElementById('avatar-action-name').innerText = isMyProfile ? 'My Status' : (fullName || 'User');
             
+            const closeModal = () => {
+                modal.classList.remove('active');
+                modal.style.opacity = '0';
+                modal.style.pointerEvents = 'none';
+                setTimeout(() => modal.style.display = 'none', 200);
+            };
+            
             document.getElementById('btn-action-view-profile').onclick = () => {
-                modal.style.display = 'none';
+                closeModal();
                 if(window.openProfileViewer) {
                     window.openProfileViewer(profilePicUrl, isMyProfile);
                 } else {
@@ -76,7 +83,7 @@ window.handleAvatarClick = (userId, e) => {
             };
             
             document.getElementById('btn-action-view-status').onclick = () => {
-                modal.style.display = 'none';
+                closeModal();
                 if (isMyProfile) {
                     if (typeof openStatusViewer === 'function') openStatusViewer(userId, window.globalMyStatuses);
                 } else {
@@ -86,10 +93,15 @@ window.handleAvatarClick = (userId, e) => {
             };
             
             modal.style.display = 'flex';
+            setTimeout(() => {
+                modal.classList.add('active');
+                modal.style.opacity = '1';
+                modal.style.pointerEvents = 'all';
+            }, 10);
             
             // Close modal when clicking outside
             modal.onclick = (e) => {
-                if (e.target === modal) modal.style.display = 'none';
+                if (e.target === modal) closeModal();
             };
         } else {
             // No status, just open profile
@@ -100,7 +112,7 @@ window.handleAvatarClick = (userId, e) => {
             }
         }
     } catch(err) {
-        alert("Error: " + err.message + "\n" + err.stack);
+        alert("Error: " + err.message + "\\n" + err.stack);
     }
 };
 
