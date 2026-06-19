@@ -1,6 +1,6 @@
 
 
-import { db, auth } from './firebase-config.js?v=60';
+import { db, auth } from './firebase-config.js?v=62';
 import { collection, query, where, onSnapshot, addDoc, serverTimestamp, orderBy, getDocs, getDoc, doc, deleteDoc, updateDoc, setDoc, or, deleteField } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -20,6 +20,29 @@ window.hasActiveStatus = (userId) => {
         return window.globalMyStatuses.length > 0;
     }
     return window.globalGroupedStatuses[userId] && window.globalGroupedStatuses[userId].length > 0;
+};
+
+window.getStatusRingClass = (userId) => {
+    if (!window.hasActiveStatus(userId)) return '';
+    
+    let statuses = [];
+    if (currentUser && userId === currentUser.userId) {
+        statuses = window.globalMyStatuses;
+        // Own statuses always show green ring
+        return statuses.length > 0 ? 'status-ring' : '';
+    } else {
+        statuses = window.globalGroupedStatuses[userId] || [];
+    }
+    
+    let allSeen = true;
+    statuses.forEach(s => {
+        const viewers = s.viewers || [];
+        if (!viewers.some(v => v.userId === currentUser.userId)) {
+            allSeen = false;
+        }
+    });
+    
+    return allSeen ? 'status-ring-seen' : 'status-ring';
 };
 
 window.handleAvatarClick = (userId, e) => {
@@ -415,7 +438,7 @@ const renderUsers = (users) => {
         div.onclick = () => selectUser(user);
         
         div.innerHTML = `
-            <img src="${user.profilePic || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" class="avatar ${window.hasActiveStatus(user.userId) ? 'status-ring' : ''}" style="cursor: pointer;" onclick="window.handleAvatarClick('${user.userId}', this.src, '${user.fullName.replace(/'/g, "\'").replace(/"/g, "&quot;")}', event)">
+            <img src="${user.profilePic || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" class="avatar ${window.getStatusRingClass(user.userId)}" style="cursor: pointer;" onclick="window.handleAvatarClick('${user.userId}', this.src, '${user.fullName.replace(/'/g, "\'").replace(/"/g, "&quot;")}', event)">
             <div class="chat-item-info">
                 <div class="chat-item-header">
                     <span class="chat-item-name">${user.fullName}</span>
@@ -719,10 +742,10 @@ const selectUser = (user) => {
     const activeUserPic = document.getElementById('active-user-pic');
     if (activeUserPic) {
         activeUserPic.src = user.profilePic || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
-    if (window.hasActiveStatus(user.userId)) {
-        activeUserPic.classList.add('status-ring');
-    } else {
-        activeUserPic.classList.remove('status-ring');
+    activeUserPic.classList.remove('status-ring', 'status-ring-seen');
+    const ringClass = window.getStatusRingClass(user.userId);
+    if (ringClass) {
+        activeUserPic.classList.add(ringClass);
     }
     
     // Bind click to the new handleAvatarClick
