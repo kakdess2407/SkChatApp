@@ -169,8 +169,8 @@ window.addEventListener('popstate', (e) => {
 
     // 3.5 Profile Viewer Overlay
     const profileViewerOverlay = document.getElementById('profile-viewer-overlay');
-    if (profileViewerOverlay && profileViewerOverlay.style.display === 'flex') {
-        profileViewerOverlay.style.display = 'none';
+    if (profileViewerOverlay && profileViewerOverlay.classList.contains('active')) {
+        profileViewerOverlay.classList.remove('active');
         return;
     }
 
@@ -3161,7 +3161,7 @@ window.openProfileViewer = (src, isMyProfile) => {
         if (btnEdit) {
             btnEdit.style.display = isMyProfile ? 'block' : 'none';
         }
-        overlay.style.display = 'flex';
+        overlay.classList.add('active');
         history.pushState({ view: 'profileViewer' }, '', '#profileViewer');
     }
 };
@@ -3174,7 +3174,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (btnClose) {
         btnClose.addEventListener('click', () => {
-            history.back(); // triggers popstate which closes it
+            if (overlay.classList.contains('active')) {
+                history.back(); // triggers popstate which closes it
+            }
         });
     }
     
