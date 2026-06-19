@@ -65,6 +65,32 @@
             </div>
 
             <!-- Bottom Navigation Menu -->
+            
+            <!-- Status Sidebar -->
+            <div class="sidebar-content" id="sidebar-status" style="display: none; flex: 1; overflow-y: auto;">
+                <div class="status-header" style="padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--wa-border);">
+                    <h3 style="margin: 0; font-size: 18px;">Status</h3>
+                </div>
+                
+                <!-- My Status -->
+                <div class="status-item" id="btn-add-status" style="display: flex; align-items: center; padding: 12px 15px; cursor: pointer; transition: background-color 0.2s;">
+                    <div style="position: relative; width: 45px; height: 45px; margin-right: 15px;">
+                        <img id="my-status-pic" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+                        <div style="position: absolute; bottom: 0; right: 0; background: var(--wa-green-light); color: white; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 14px; border: 2px solid white;">+</div>
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 500; font-size: 16px; color: var(--wa-text-dark);">My status</div>
+                        <div style="font-size: 13px; color: var(--wa-text-light);">Tap to add status update</div>
+                    </div>
+                </div>
+
+                <div style="padding: 8px 15px; font-size: 13px; font-weight: 600; color: var(--wa-text-light); text-transform: uppercase;">Recent updates</div>
+                
+                <div id="status-list">
+                    <!-- Status items will be populated here -->
+                </div>
+            </div>
+
             <nav class="bottom-nav" id="bottom-nav">
                 <button class="nav-tab active" data-target="sidebar-chats">
                     <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
@@ -404,6 +430,92 @@
     </div>
 
     <!-- Firebase SDK will be loaded in chat.js -->
-    <script type="module" src="js/chat_v8.js?v=44"></script>
+    <script type="module" src="js/chat_v8.js?v=45"></script>
+
+    <!-- Status Upload Modal -->
+    <div id="status-upload-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 400px; width: 90%; background: var(--wa-bg-light); display: flex; flex-direction: column;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 1px solid var(--wa-border);">
+                <h3 style="margin:0; font-weight: 500; font-size: 18px;">Create Status</h3>
+                <button id="btn-close-status-upload" style="background: none; border: none; cursor: pointer; color: var(--wa-text-light);">
+                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div style="padding: 15px 0;">
+                <input type="file" id="status-file-input" accept="image/*,video/*" style="display: none;">
+                <div id="status-preview-container" style="width: 100%; height: 300px; background: #000; display: flex; align-items: center; justify-content: center; margin-bottom: 15px; cursor: pointer;">
+                    <div id="status-placeholder" style="color: white; text-align: center;">
+                        <svg viewBox="0 0 24 24" width="40" height="40" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                        <div>Tap to select Media</div>
+                    </div>
+                    <img id="status-img-preview" style="display: none; max-width: 100%; max-height: 100%; object-fit: contain;">
+                    <video id="status-video-preview" style="display: none; max-width: 100%; max-height: 100%; object-fit: contain;" controls></video>
+                </div>
+                <input type="text" id="status-caption-input" class="settings-input" style="width: 100%; padding: 12px; border: 1px solid var(--wa-border); border-radius: 6px;" placeholder="Add a caption...">
+            </div>
+            <div style="display: flex; justify-content: flex-end;">
+                <button id="btn-send-status" class="btn-primary" style="padding: 10px 20px; border-radius: 20px;">Send Status</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Viewer Overlay -->
+    <div id="status-viewer-overlay" class="modal-overlay" style="z-index: 10002; background: black; flex-direction: column;">
+        <!-- Progress bars -->
+        <div id="status-progress-container" style="position: absolute; top: 10px; left: 10px; right: 10px; display: flex; gap: 4px; z-index: 10003;">
+            <!-- Generated dynamically -->
+        </div>
+        
+        <!-- Header -->
+        <div style="position: absolute; top: 25px; left: 15px; right: 15px; display: flex; align-items: center; z-index: 10003; color: white;">
+            <button id="btn-close-status-viewer" style="background: none; border: none; color: white; padding: 5px; cursor: pointer; margin-right: 10px;">
+                <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2" fill="none"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            </button>
+            <img id="status-viewer-avatar" src="" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; margin-right: 10px;">
+            <div style="flex: 1;">
+                <div id="status-viewer-name" style="font-weight: 500; font-size: 16px;"></div>
+                <div id="status-viewer-time" style="font-size: 12px; color: rgba(255,255,255,0.7);"></div>
+            </div>
+            <!-- Delete button for my status -->
+            <button id="btn-delete-my-status" style="background: none; border: none; color: white; padding: 5px; cursor: pointer; display: none;">
+                <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
+        </div>
+
+        <!-- Touch areas -->
+        <div id="status-tap-left" style="position: absolute; top: 0; left: 0; width: 30%; height: 100%; z-index: 10002;"></div>
+        <div id="status-tap-right" style="position: absolute; top: 0; right: 0; width: 70%; height: 100%; z-index: 10002;"></div>
+
+        <!-- Media -->
+        <div style="flex: 1; display: flex; align-items: center; justify-content: center; width: 100%; overflow: hidden; pointer-events: none;">
+            <img id="status-viewer-img" src="" style="width: 100%; height: 100%; object-fit: contain; display: none;">
+            <video id="status-viewer-video" src="" style="width: 100%; height: 100%; object-fit: contain; display: none;" playsinline></video>
+        </div>
+
+        <!-- Caption -->
+        <div id="status-viewer-caption" style="position: absolute; bottom: 80px; left: 0; right: 0; text-align: center; color: white; font-size: 16px; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); z-index: 10003; padding: 0 20px;"></div>
+
+        <!-- Views / Eye Icon (Only for My Status) -->
+        <div id="status-views-container" style="position: absolute; bottom: 20px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; z-index: 10003; color: white; cursor: pointer; display: none;">
+            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            <div id="status-views-count" style="font-size: 14px; font-weight: 500; margin-top: 4px;">0</div>
+        </div>
+    </div>
+
+    <!-- Status Viewers List Modal -->
+    <div id="status-viewers-modal" class="modal-overlay" style="z-index: 10004;">
+        <div class="modal-content" style="max-width: 400px; width: 90%; background: var(--wa-bg-light); display: flex; flex-direction: column; max-height: 70vh;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 1px solid var(--wa-border);">
+                <h3 style="margin:0; font-weight: 500; font-size: 18px;">Viewed by</h3>
+                <button id="btn-close-status-viewers" style="background: none; border: none; cursor: pointer; color: var(--wa-text-light);">
+                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div id="status-viewers-list" style="overflow-y: auto; flex: 1; padding-top: 10px;">
+                <!-- Viewers populated here -->
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>

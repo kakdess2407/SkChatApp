@@ -1,4 +1,5 @@
-import { db, auth } from './firebase-config.js?v=5';
+import { db, auth, storage } from './firebase-config.js?v=5';
+import { ref as storageRef, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 import { collection, query, where, onSnapshot, addDoc, serverTimestamp, orderBy, getDocs, getDoc, doc, deleteDoc, updateDoc, setDoc, or, deleteField } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -3184,5 +3185,507 @@ document.addEventListener('DOMContentLoaded', () => {
         btnEdit.addEventListener('click', () => {
             settingsProfilePic.click();
         });
+    }
+});
+
+
+// ==========================================
+// STATUS (STORIES) FEATURE
+// ==========================================
+
+const sidebarStatus = document.getElementById('sidebar-status');
+const statusList = document.getElementById('status-list');
+const btnAddStatus = document.getElementById('btn-add-status');
+const myStatusPic = document.getElementById('my-status-pic');
+
+const statusUploadModal = document.getElementById('status-upload-modal');
+const btnCloseStatusUpload = document.getElementById('btn-close-status-upload');
+const statusFileInput = document.getElementById('status-file-input');
+const statusPreviewContainer = document.getElementById('status-preview-container');
+const statusPlaceholder = document.getElementById('status-placeholder');
+const statusImgPreview = document.getElementById('status-img-preview');
+const statusVideoPreview = document.getElementById('status-video-preview');
+const statusCaptionInput = document.getElementById('status-caption-input');
+const btnSendStatus = document.getElementById('btn-send-status');
+
+const statusViewerOverlay = document.getElementById('status-viewer-overlay');
+const btnCloseStatusViewer = document.getElementById('btn-close-status-viewer');
+const statusViewerImg = document.getElementById('status-viewer-img');
+const statusViewerVideo = document.getElementById('status-viewer-video');
+const statusViewerAvatar = document.getElementById('status-viewer-avatar');
+const statusViewerName = document.getElementById('status-viewer-name');
+const statusViewerTime = document.getElementById('status-viewer-time');
+const statusViewerCaption = document.getElementById('status-viewer-caption');
+const statusProgressContainer = document.getElementById('status-progress-container');
+const statusTapLeft = document.getElementById('status-tap-left');
+const statusTapRight = document.getElementById('status-tap-right');
+const btnDeleteMyStatus = document.getElementById('btn-delete-my-status');
+const statusViewsContainer = document.getElementById('status-views-container');
+const statusViewsCount = document.getElementById('status-views-count');
+
+const statusViewersModal = document.getElementById('status-viewers-modal');
+const btnCloseStatusViewers = document.getElementById('btn-close-status-viewers');
+const statusViewersList = document.getElementById('status-viewers-list');
+
+let allStatuses = [];
+let groupedStatuses = {};
+let currentStatusGroup = [];
+let currentStatusIndex = 0;
+let statusTimer = null;
+let statusIsPaused = false;
+let currentStatusUserId = null;
+let statusSelectedFile = null;
+
+// Initialize My Status Pic
+if (myStatusPic && currentUser) {
+    myStatusPic.src = currentUser.profilePic;
+}
+
+// Check if user is connected
+const isUserConnected = (otherUserId) => {
+    if (otherUserId === currentUser.userId) return true; // Self is always connected
+    const chatId = getChatId(currentUser.userId, otherUserId);
+    if (!userChats.has(chatId)) return false;
+    const chatData = userChats.get(chatId);
+    
+    // Check if blocked
+    if (chatData.blockedBy && chatData.blockedBy.length > 0) return false;
+    // Check if rejected
+    if (chatData.connectionStatus === 'rejected') return false;
+    
+    return true;
+};
+
+// Fetch statuses in real-time
+const statusesRef = collection(db, 'statuses');
+// Use a reasonable lookback window (e.g. 24 hours) since Firestore doesn't support direct TTL filtering well without index
+const yesterday = new Date();
+yesterday.setHours(yesterday.getHours() - 24);
+
+const statusesQuery = query(statusesRef, where('createdAt', '>', yesterday));
+onSnapshot(statusesQuery, (snapshot) => {
+    const now = new Date();
+    allStatuses = [];
+    
+    snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        data.id = docSnap.id;
+        
+        // Check 12-hour expiration manually
+        const createdAt = data.createdAt ? data.createdAt.toDate() : now;
+        const diffHours = (now - createdAt) / (1000 * 60 * 60);
+        
+        if (diffHours < 12 && isUserConnected(data.userId)) {
+            allStatuses.push(data);
+        }
+    });
+    
+    renderStatusList();
+});
+
+const renderStatusList = () => {
+    if (!statusList) return;
+    
+    groupedStatuses = {};
+    let myStatuses = [];
+    
+    // Group by user
+    allStatuses.sort((a, b) => a.createdAt?.toDate() - b.createdAt?.toDate()).forEach(status => {
+        if (status.userId === currentUser.userId) {
+            myStatuses.push(status);
+        } else {
+            if (!groupedStatuses[status.userId]) {
+                groupedStatuses[status.userId] = [];
+            }
+            groupedStatuses[status.userId].push(status);
+        }
+    });
+    
+    // Update My Status UI
+    const myStatusRing = btnAddStatus.querySelector('div[style*="border-radius: 50%"]');
+    if (myStatuses.length > 0) {
+        myStatusRing.style.border = '2px solid var(--wa-green-light)';
+        myStatusRing.style.padding = '2px';
+        btnAddStatus.onclick = () => openStatusViewer(currentUser.userId, myStatuses);
+    } else {
+        myStatusRing.style.border = 'none';
+        myStatusRing.style.padding = '0';
+        btnAddStatus.onclick = () => {
+            if (statusUploadModal) statusUploadModal.classList.add('active');
+        };
+    }
+    
+    statusList.innerHTML = '';
+    
+    // Render other users
+    for (const [userId, statuses] of Object.entries(groupedStatuses)) {
+        const user = allUsers.find(u => u.userId === userId) || { fullName: 'Unknown', profilePic: 'https://cdn-icons-png.flaticon.com/512/149/149071.png' };
+        
+        // Check if all seen
+        let allSeen = true;
+        statuses.forEach(s => {
+            const viewers = s.viewers || [];
+            if (!viewers.some(v => v.userId === currentUser.userId)) {
+                allSeen = false;
+            }
+        });
+        
+        const lastStatus = statuses[statuses.length - 1];
+        const timeString = lastStatus.createdAt ? lastStatus.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now';
+        
+        const ringColor = allSeen ? 'var(--wa-border)' : 'var(--wa-green-light)';
+        
+        const div = document.createElement('div');
+        div.className = 'status-item';
+        div.style.display = 'flex';
+        div.style.alignItems = 'center';
+        div.style.padding = '12px 15px';
+        div.style.cursor = 'pointer';
+        div.style.transition = 'background-color 0.2s';
+        
+        div.innerHTML = `
+            <div style="position: relative; width: 45px; height: 45px; margin-right: 15px; border-radius: 50%; border: 2px solid ${ringColor}; padding: 2px;">
+                <img src="${user.profilePic}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+            </div>
+            <div style="flex: 1;">
+                <div style="font-weight: 500; font-size: 16px; color: var(--wa-text-dark);">${user.fullName}</div>
+                <div style="font-size: 13px; color: var(--wa-text-light);">${timeString}</div>
+            </div>
+        `;
+        
+        div.onclick = () => openStatusViewer(userId, statuses, user);
+        statusList.appendChild(div);
+    }
+};
+
+// --- Upload Status UI ---
+if (statusPreviewContainer) {
+    statusPreviewContainer.onclick = () => statusFileInput.click();
+}
+if (statusFileInput) {
+    statusFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        statusSelectedFile = file;
+        
+        statusPlaceholder.style.display = 'none';
+        
+        if (file.type.startsWith('video/')) {
+            statusImgPreview.style.display = 'none';
+            statusVideoPreview.src = URL.createObjectURL(file);
+            statusVideoPreview.style.display = 'block';
+        } else {
+            statusVideoPreview.style.display = 'none';
+            statusImgPreview.src = URL.createObjectURL(file);
+            statusImgPreview.style.display = 'block';
+        }
+    });
+}
+if (btnCloseStatusUpload) {
+    btnCloseStatusUpload.onclick = () => {
+        statusUploadModal.classList.remove('active');
+        statusSelectedFile = null;
+        statusPlaceholder.style.display = 'block';
+        statusImgPreview.style.display = 'none';
+        statusVideoPreview.style.display = 'none';
+        statusCaptionInput.value = '';
+    };
+}
+
+// Upload Media
+const uploadMediaToFirebase = async (file) => {
+    const ext = file.name.split('.').pop();
+    const fileName = `status_${currentUser.userId}_${Date.now()}.${ext}`;
+    const fileRef = storageRef(storage, `statuses/${fileName}`);
+    
+    const uploadTask = await uploadBytesResumable(fileRef, file);
+    const downloadURL = await getDownloadURL(uploadTask.ref);
+    return downloadURL;
+};
+
+if (btnSendStatus) {
+    btnSendStatus.onclick = async () => {
+        if (!statusSelectedFile) return alert('Please select an image or video');
+        
+        btnSendStatus.disabled = true;
+        btnSendStatus.innerText = 'Sending...';
+        
+        try {
+            const mediaUrl = await uploadMediaToFirebase(statusSelectedFile);
+            
+            await addDoc(collection(db, 'statuses'), {
+                userId: currentUser.userId,
+                mediaUrl: mediaUrl,
+                mediaType: statusSelectedFile.type.startsWith('video/') ? 'video' : 'image',
+                caption: statusCaptionInput.value.trim(),
+                createdAt: serverTimestamp(),
+                viewers: []
+            });
+            
+            btnCloseStatusUpload.click();
+        } catch(e) {
+            console.error(e);
+            alert('Failed to upload status: ' + e.message);
+        } finally {
+            btnSendStatus.disabled = false;
+            btnSendStatus.innerText = 'Send Status';
+        }
+    };
+}
+
+// --- Status Viewer UI ---
+const clearStatusTimer = () => {
+    if (statusTimer) {
+        clearTimeout(statusTimer);
+        statusTimer = null;
+    }
+};
+
+const openStatusViewer = (userId, statuses, userObj = null) => {
+    currentStatusGroup = statuses;
+    currentStatusIndex = 0;
+    currentStatusUserId = userId;
+    
+    if (userId === currentUser.userId) {
+        statusViewerAvatar.src = currentUser.profilePic;
+        statusViewerName.innerText = 'My Status';
+        btnDeleteMyStatus.style.display = 'block';
+        statusViewsContainer.style.display = 'flex';
+    } else {
+        statusViewerAvatar.src = userObj ? userObj.profilePic : 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+        statusViewerName.innerText = userObj ? userObj.fullName : 'User';
+        btnDeleteMyStatus.style.display = 'none';
+        statusViewsContainer.style.display = 'none';
+    }
+    
+    statusProgressContainer.innerHTML = '';
+    statuses.forEach((_, i) => {
+        const bar = document.createElement('div');
+        bar.style.flex = '1';
+        bar.style.height = '3px';
+        bar.style.background = 'rgba(255,255,255,0.3)';
+        bar.style.borderRadius = '2px';
+        
+        const fill = document.createElement('div');
+        fill.id = `status-progress-fill-${i}`;
+        fill.style.height = '100%';
+        fill.style.width = '0%';
+        fill.style.background = 'white';
+        fill.style.borderRadius = '2px';
+        
+        bar.appendChild(fill);
+        statusProgressContainer.appendChild(bar);
+    });
+    
+    statusViewerOverlay.classList.add('active');
+    history.pushState({ view: 'statusViewer' }, '', '#statusViewer');
+    
+    showStatus(0);
+};
+
+const showStatus = async (index) => {
+    clearStatusTimer();
+    statusIsPaused = false;
+    
+    if (index >= currentStatusGroup.length) {
+        closeStatusViewer();
+        return;
+    }
+    
+    // Mark previous as full
+    for (let i = 0; i < index; i++) {
+        document.getElementById(`status-progress-fill-${i}`).style.width = '100%';
+        document.getElementById(`status-progress-fill-${i}`).style.transition = 'none';
+    }
+    // Mark next as empty
+    for (let i = index + 1; i < currentStatusGroup.length; i++) {
+        document.getElementById(`status-progress-fill-${i}`).style.width = '0%';
+        document.getElementById(`status-progress-fill-${i}`).style.transition = 'none';
+    }
+    
+    currentStatusIndex = index;
+    const status = currentStatusGroup[index];
+    
+    statusViewerTime.innerText = status.createdAt ? status.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+    statusViewerCaption.innerText = status.caption || '';
+    
+    if (status.userId === currentUser.userId) {
+        statusViewsCount.innerText = (status.viewers || []).length;
+        statusViewsContainer.onclick = () => openViewersList(status);
+    }
+    
+    const fillEl = document.getElementById(`status-progress-fill-${index}`);
+    fillEl.style.width = '0%';
+    fillEl.style.transition = 'none';
+    
+    // Record view if not my own and not already viewed
+    if (status.userId !== currentUser.userId) {
+        const viewers = status.viewers || [];
+        if (!viewers.some(v => v.userId === currentUser.userId)) {
+            const statusRef = doc(db, 'statuses', status.id);
+            viewers.push({
+                userId: currentUser.userId,
+                viewedAt: new Date()
+            });
+            updateDoc(statusRef, { viewers: viewers }).catch(e => console.error(e));
+        }
+    }
+    
+    let duration = 5000;
+    
+    if (status.mediaType === 'video') {
+        statusViewerImg.style.display = 'none';
+        statusViewerVideo.src = status.mediaUrl;
+        statusViewerVideo.style.display = 'block';
+        statusViewerVideo.currentTime = 0;
+        
+        // Wait for video metadata to get duration
+        statusViewerVideo.onloadedmetadata = () => {
+            duration = (statusViewerVideo.duration * 1000) || 5000;
+            statusViewerVideo.play();
+            startProgress(fillEl, duration);
+        };
+        // Fallback if metadata fails
+        setTimeout(() => {
+            if(statusViewerVideo.readyState === 0) startProgress(fillEl, duration);
+        }, 500);
+        
+    } else {
+        statusViewerVideo.style.display = 'none';
+        statusViewerVideo.pause();
+        statusViewerImg.src = status.mediaUrl;
+        statusViewerImg.style.display = 'block';
+        
+        // Small timeout to allow render
+        setTimeout(() => startProgress(fillEl, duration), 50);
+    }
+};
+
+const startProgress = (fillEl, duration) => {
+    // Reflow to apply transition
+    fillEl.offsetHeight; 
+    fillEl.style.transition = `width ${duration}ms linear`;
+    fillEl.style.width = '100%';
+    
+    statusTimer = setTimeout(() => {
+        showStatus(currentStatusIndex + 1);
+    }, duration);
+};
+
+const closeStatusViewer = () => {
+    clearStatusTimer();
+    statusViewerVideo.pause();
+    statusViewerOverlay.classList.remove('active');
+    if (history.state && history.state.view === 'statusViewer') history.back();
+};
+
+if (btnCloseStatusViewer) btnCloseStatusViewer.onclick = closeStatusViewer;
+
+if (statusTapLeft) {
+    statusTapLeft.onclick = () => {
+        if (currentStatusIndex > 0) showStatus(currentStatusIndex - 1);
+    };
+}
+if (statusTapRight) {
+    statusTapRight.onclick = () => {
+        showStatus(currentStatusIndex + 1);
+    };
+}
+
+// Pause on hold
+const pauseStatus = () => {
+    if(!statusIsPaused) {
+        statusIsPaused = true;
+        clearStatusTimer();
+        statusViewerVideo.pause();
+        const fillEl = document.getElementById(`status-progress-fill-${currentStatusIndex}`);
+        const computedWidth = window.getComputedStyle(fillEl).width;
+        fillEl.style.transition = 'none';
+        fillEl.style.width = computedWidth;
+    }
+};
+const resumeStatus = () => {
+    if (statusIsPaused) {
+        statusIsPaused = false;
+        // Simplified resume logic: just restarts the current status for ease
+        showStatus(currentStatusIndex);
+    }
+};
+
+statusTapLeft.addEventListener('mousedown', pauseStatus);
+statusTapLeft.addEventListener('mouseup', resumeStatus);
+statusTapLeft.addEventListener('touchstart', pauseStatus);
+statusTapLeft.addEventListener('touchend', resumeStatus);
+
+statusTapRight.addEventListener('mousedown', pauseStatus);
+statusTapRight.addEventListener('mouseup', resumeStatus);
+statusTapRight.addEventListener('touchstart', pauseStatus);
+statusTapRight.addEventListener('touchend', resumeStatus);
+
+// Delete My Status
+if (btnDeleteMyStatus) {
+    btnDeleteMyStatus.onclick = async () => {
+        if (confirm("Delete this status update?")) {
+            const status = currentStatusGroup[currentStatusIndex];
+            clearStatusTimer();
+            try {
+                await deleteDoc(doc(db, 'statuses', status.id));
+                closeStatusViewer();
+            } catch(e) { alert("Failed to delete status."); }
+        }
+    };
+}
+
+// --- Viewers List ---
+const openViewersList = (status) => {
+    pauseStatus();
+    statusViewersList.innerHTML = '';
+    
+    const viewers = status.viewers || [];
+    if (viewers.length === 0) {
+        statusViewersList.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--wa-text-light);">No views yet</div>';
+    } else {
+        // Sort by most recent
+        viewers.sort((a, b) => b.viewedAt - a.viewedAt).forEach(v => {
+            const user = allUsers.find(u => u.userId === v.userId) || { fullName: 'Unknown', profilePic: 'https://cdn-icons-png.flaticon.com/512/149/149071.png' };
+            const timeString = v.viewedAt?.toDate ? v.viewedAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently';
+            
+            const div = document.createElement('div');
+            div.style.display = 'flex';
+            div.style.alignItems = 'center';
+            div.style.padding = '10px 15px';
+            div.style.borderBottom = '1px solid var(--wa-border)';
+            
+            div.innerHTML = `
+                <img src="${user.profilePic}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; margin-right: 15px;">
+                <div style="flex: 1;">
+                    <div style="font-weight: 500; font-size: 16px; color: var(--wa-text-dark);">${user.fullName}</div>
+                    <div style="font-size: 13px; color: var(--wa-text-light);">${timeString}</div>
+                </div>
+            `;
+            statusViewersList.appendChild(div);
+        });
+    }
+    
+    statusViewersModal.classList.add('active');
+};
+
+if (btnCloseStatusViewers) {
+    btnCloseStatusViewers.onclick = () => {
+        statusViewersModal.classList.remove('active');
+        resumeStatus();
+    };
+}
+
+// Hook into popstate
+window.addEventListener('popstate', () => {
+    if (statusViewerOverlay.classList.contains('active')) {
+        closeStatusViewer();
+    }
+    if (statusViewersModal.classList.contains('active')) {
+        statusViewersModal.classList.remove('active');
+    }
+    if (statusUploadModal.classList.contains('active')) {
+        btnCloseStatusUpload.click();
     }
 });
