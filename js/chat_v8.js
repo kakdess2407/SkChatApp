@@ -73,7 +73,11 @@ const IMGBB_API_KEY = '114dfeeeb0e7a925c0811041e6e9cee4';
 
 // Attachment elements
 const btnAttach = document.getElementById('btn-attach');
-const imageUploadInput = document.getElementById('image-upload-input');
+const btnCamera = document.getElementById('btn-camera');
+const fileInput = document.getElementById('file-input');
+const cameraInput = document.getElementById('camera-input');
+// Use the old imageUploadInput var for backward compatibility with uploadImage if it expects it
+const imageUploadInput = fileInput;
 
 
 // Lightbox Logic
@@ -111,19 +115,23 @@ if (btnDownloadLightbox) {
             setTimeout(() => btnDownloadLightbox.style.transform = 'scale(1)', 200);
             
             const url = lightboxImg.src;
-            const response = await fetch(url);
-            const blob = await response.blob();
-            const blobUrl = URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            a.href = blobUrl;
-            a.download = `SkChat_Image_${Date.now()}.jpg`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            
-            URL.revokeObjectURL(blobUrl);
-            console.log("Image downloaded successfully!");
+            const filename = `SkChat_Image_${Date.now()}.jpg`;
+            if (window.AndroidAuth && typeof window.AndroidAuth.downloadImage === 'function') {
+                window.AndroidAuth.downloadImage(url, filename);
+            } else {
+                // Fallback for Web browser
+                const response = await fetch(url);
+                const blob = await response.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = blobUrl;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(blobUrl);
+            }
         } catch (err) {
             console.error("Failed to download image", err);
             alert("Could not download image. It might be blocked by browser security.");
@@ -815,8 +823,57 @@ if (btnSend) {
 
 if (btnAttach && imageUploadInput) {
     btnAttach.addEventListener('click', () => {
-        imageUploadInput.click();
+        fileInput.click();
     });
+    
+    if(btnCamera && cameraInput) {
+        btnCamera.addEventListener('click', () => {
+            cameraInput.click();
+        });
+        cameraInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            if (!activeChatId) {
+                alert("Please select a chat first");
+                return;
+            }
+            
+            try {
+                const formData = new FormData();
+                formData.append('image', file);
+                
+                const response = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    const imageUrl = data.data.url;
+                    
+                    const msgRef = doc(collection(db, "messages"));
+                    await setDoc(msgRef, {
+                        chatId: activeChatId,
+                        senderId: currentUser.userId,
+                        text: "📷 Photo",
+                        timestamp: serverTimestamp(),
+                        fileUrl: imageUrl,
+                        fileType: "image",
+                        isRead: false
+                    });
+                    
+                    if (chatMsgsContainer) {
+                        chatMsgsContainer.scrollTop = chatMsgsContainer.scrollHeight;
+                    }
+                }
+            } catch (error) {
+                console.error("Upload failed", error);
+                alert("Upload failed. Please try again.");
+            }
+            e.target.value = '';
+        });
+    }
 
     imageUploadInput.addEventListener('change', async (e) => {
         const file = e.target.files[0];
