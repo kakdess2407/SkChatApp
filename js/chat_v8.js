@@ -100,24 +100,83 @@ if (btnCloseLightbox) {
     });
 }
 
+const btnDownloadLightbox = document.getElementById('btn-download-lightbox');
+if (btnDownloadLightbox) {
+    btnDownloadLightbox.addEventListener('click', async () => {
+        if (!lightboxImg || !lightboxImg.src) return;
+        
+        try {
+            // Animate button
+            btnDownloadLightbox.style.transform = 'scale(0.8)';
+            setTimeout(() => btnDownloadLightbox.style.transform = 'scale(1)', 200);
+            
+            const url = lightboxImg.src;
+            const response = await fetch(url);
+            const blob = await response.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = `SkChat_Image_${Date.now()}.jpg`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            URL.revokeObjectURL(blobUrl);
+            console.log("Image downloaded successfully!");
+        } catch (err) {
+            console.error("Failed to download image", err);
+            alert("Could not download image. It might be blocked by browser security.");
+        }
+    });
+}
+
+
 window.addEventListener('popstate', (e) => {
+    // 1. Call Overlay (Highest priority)
+    const callOverlay = document.getElementById('call-overlay');
+    if (callOverlay && callOverlay.classList.contains('active')) {
+        history.pushState({ view: 'call' }, '', '#call'); // Prevent closing
+        if (typeof enterInAppPip === 'function') enterInAppPip();
+        return;
+    }
+
+    // 2. Delete Modal
+    const deleteModalOverlay = document.getElementById('delete-modal-overlay');
+    if (deleteModalOverlay && deleteModalOverlay.style.display === 'flex') {
+        deleteModalOverlay.style.display = 'none';
+        history.pushState({ view: 'chat' }, '', '#chat'); // Restore chat state
+        return;
+    }
+
+    // 3. Reaction Overlay
     if (reactionOverlay && reactionOverlay.style.display === 'flex') {
         reactionOverlay.style.display = 'none';
-    } else if (imageLightbox && imageLightbox.style.display === 'flex') {
+        history.pushState({ view: 'chat' }, '', '#chat'); // Restore chat state
+        return;
+    }
+
+    // 4. Image Lightbox
+    if (imageLightbox && imageLightbox.style.display === 'flex') {
         window.closeLightbox();
-    } else if (activeChatId) {
-        // If chat is open, close chat
+        // closeLightbox doesn't pop or push, so we're good (it just hides). Actually we don't need to push state here because opening lightbox pushed a state, so popping it is correct!
+        return;
+    }
+
+    // 5. Chat Area
+    const chatArea = document.getElementById('chat-area');
+    if (chatArea && chatArea.classList.contains('mobile-active')) {
+        chatArea.classList.remove('mobile-active');
         activeChatId = null;
         activeChatUserId = null;
         if (currentMessagesUnsubscribe) {
             currentMessagesUnsubscribe();
             currentMessagesUnsubscribe = null;
         }
-        document.querySelector('.chat-area').classList.remove('mobile-active');
-        // Notify native
-        if (window.AndroidAuth) {
+        if (window.AndroidAuth && typeof window.AndroidAuth.setChatOpen === 'function') {
             window.AndroidAuth.setChatOpen(false);
         }
+        return;
     }
 });
 
@@ -147,26 +206,7 @@ if (btnBack) {
 // History API for Android Hardware Back Button
 history.replaceState({ view: 'home' }, '', '#home');
 
-window.addEventListener('popstate', (e) => {
-    // If call overlay is active, trigger PiP instead of closing Chrome
-    const callOverlay = document.getElementById('call-overlay');
-    if (callOverlay && callOverlay.classList.contains('active')) {
-        history.pushState({ view: 'call' }, '', '#call'); // Prevent closing
-        if (typeof enterInAppPip === 'function') enterInAppPip();
-        return;
-    }
-    
-    // If chat area is open on mobile, hide it instead of closing Chrome
-    const chatArea = document.getElementById('chat-area');
-    if (chatArea && chatArea.classList.contains('mobile-active')) {
-        chatArea.classList.remove('mobile-active');
-        activeChatUserId = null;
-        if (window.AndroidAuth && typeof window.AndroidAuth.setChatOpen === 'function') {
-            window.AndroidAuth.setChatOpen(false);
-        }
-        return;
-    }
-});
+
 
 // Logout
 if (btnLogout) {
@@ -667,7 +707,7 @@ const renderMessage = (msg) => {
     
     if (msg.fileUrl) {
         if (msg.fileType && msg.fileType.startsWith('image/')) {
-            contentHtml = `<img src="${msg.fileUrl}" class="message-image" style="-webkit-touch-callout: none;">`;
+            contentHtml = `<img src="${msg.fileUrl}" class="message-image" style="-webkit-touch-callout: none; -webkit-user-select: none; user-select: none; -webkit-user-drag: none;">`;
         } else {
             contentHtml = `
                 <a href="${msg.fileUrl}" target="_blank" class="message-file">
@@ -2786,7 +2826,7 @@ if (chatMsgsContainer) {
         const msgId = msgEl.getAttribute('data-id');
         if (msgId) {
             longPressTimer = setTimeout(() => {
-                window.showReactionPicker(e.touches[0].clientX, e.touches[0].clientY, msgId);
+                window.showReactionPicker(touchStartX, touchStartY, msgId);
                 activeMessageElement = null; 
             }, 500); 
         }
@@ -2873,11 +2913,15 @@ if (chatMsgsContainer) {
     });
 }
 
-document.addEventListener('click', (e) => {
-    if (!e.target.closest('.reaction-picker-overlay') && !e.target.closest('.message')) {
-        if (reactionOverlay) reactionOverlay.style.display = 'none';
+const closeReactionOutside = (e) => {
+    if (reactionOverlay && reactionOverlay.style.display === 'flex') {
+        if (!e.target.closest('.reaction-picker-overlay')) {
+            reactionOverlay.style.display = 'none';
+        }
     }
-});
+};
+document.addEventListener('click', closeReactionOutside);
+document.addEventListener('touchstart', closeReactionOutside);
 
 const handleEmojiAction = async (e) => {
         if(e.cancelable) e.preventDefault();
