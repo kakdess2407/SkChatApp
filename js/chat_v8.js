@@ -106,7 +106,8 @@ if (btnCloseLightbox) {
 
 const btnDownloadLightbox = document.getElementById('btn-download-lightbox');
 if (btnDownloadLightbox) {
-    btnDownloadLightbox.addEventListener('click', async () => {
+    const handleDownload = async (e) => {
+        if(e) e.preventDefault();
         if (!lightboxImg || !lightboxImg.src) return;
         
         try {
@@ -822,14 +823,24 @@ if (btnSend) {
 }
 
 if (btnAttach && imageUploadInput) {
-    btnAttach.addEventListener('click', () => {
+    btnAttach.addEventListener('click', (e) => {
+        e.preventDefault();
         fileInput.click();
     });
+    btnAttach.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        fileInput.click();
+    }, {passive: false});
     
     if(btnCamera && cameraInput) {
-        btnCamera.addEventListener('click', () => {
+        btnCamera.addEventListener('click', (e) => {
+            e.preventDefault();
             cameraInput.click();
         });
+        btnCamera.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            cameraInput.click();
+        }, {passive: false});
         cameraInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
