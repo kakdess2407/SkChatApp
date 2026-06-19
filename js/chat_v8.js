@@ -370,7 +370,7 @@ if (currentUser) {
             // If it is open, the currentMessagesUnsubscribe will mark it as read
             const m = docSnap.data();
             if (activeChatId !== m.chatId) {
-                updateDoc(docSnap.ref, { status: 'delivered' }).catch(console.error);
+                updateDoc(docSnap.ref, { status: 'delivered' }).catch(e => { console.error(e); window.lastTickError = e.message; });
             }
         });
     });
@@ -655,7 +655,7 @@ const loadMessages = () => {
             
             // Mark as read if received by me and currently not read
             if (m.receiverId === currentUser.userId && m.status !== 'read') {
-                updateDoc(docSnap.ref, { status: 'read' }).catch(console.error);
+                updateDoc(docSnap.ref, { status: 'read' }).catch(e => { console.error(e); window.lastTickError = e.message; });
             }
         });
         
@@ -3101,6 +3101,20 @@ document.addEventListener('DOMContentLoaded', () => {
     if (biometricToggle) {
         biometricToggle.addEventListener('change', (e) => {
             localStorage.setItem('biometric_enabled', e.target.checked);
+        });
+    }
+});
+
+    // Debug helper for ticks
+    window.showTickError = () => {
+        alert("Last Tick Error: " + (window.lastTickError || "None"));
+    };
+
+document.addEventListener('DOMContentLoaded', () => {
+    const headerTitle = document.querySelector('.header h2');
+    if (headerTitle) {
+        headerTitle.addEventListener('click', () => {
+            if (window.showTickError) window.showTickError();
         });
     }
 });
