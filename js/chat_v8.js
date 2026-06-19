@@ -117,7 +117,7 @@ if (btnDownloadLightbox) {
             
             const url = lightboxImg.src;
             const filename = `SkChat_Image_${Date.now()}.jpg`;
-            if (window.AndroidAuth && typeof window.AndroidAuth.downloadImage === 'function') {
+            if (window.AndroidAuth && window.AndroidAuth.downloadImage) {
                 window.AndroidAuth.downloadImage(url, filename);
             } else {
                 // Fallback for Web browser
@@ -139,7 +139,6 @@ if (btnDownloadLightbox) {
         }
     };
     btnDownloadLightbox.addEventListener('click', handleDownload);
-    btnDownloadLightbox.addEventListener('touchstart', handleDownload, {passive: false});
 }
 
 
@@ -825,24 +824,14 @@ if (btnSend) {
 }
 
 if (btnAttach && imageUploadInput) {
-    btnAttach.addEventListener('click', (e) => {
-        e.preventDefault();
+    btnAttach.addEventListener('click', () => {
         fileInput.click();
     });
-    btnAttach.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        fileInput.click();
-    }, {passive: false});
     
     if(btnCamera && cameraInput) {
-        btnCamera.addEventListener('click', (e) => {
-            e.preventDefault();
+        btnCamera.addEventListener('click', () => {
             cameraInput.click();
         });
-        btnCamera.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            cameraInput.click();
-        }, {passive: false});
         cameraInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
