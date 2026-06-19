@@ -764,9 +764,22 @@ const renderMessage = (msg) => {
         `;
     }
     
+    
+    let tickHtml = '';
+    if (isMe) {
+        let status = msg.status || 'sent';
+        if (status === 'sent') {
+            tickHtml = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #999; margin-left: 4px; vertical-align: middle;"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+        } else if (status === 'delivered') {
+            tickHtml = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #999; margin-left: 4px; vertical-align: middle;"><polyline points="22 6 12 16 8 12"></polyline><path d="M12 6l-8 8"></path></svg>`;
+        } else if (status === 'read') {
+            tickHtml = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #53bdeb; margin-left: 4px; vertical-align: middle;"><polyline points="22 6 12 16 8 12"></polyline><path d="M12 6l-8 8"></path></svg>`;
+        }
+    }
+
     contentHtml += `<span class="message-time">
         ${formatTime(msg.timestamp)}
-        ${isMe ? '<svg viewBox="0 0 16 15" width="16" height="15"><path d="M15.01 3.316l-.478-.372a.365.365 0 0 0-.51.063L8.666 9.879a.32.32 0 0 1-.484.033l-.358-.325a.319.319 0 0 0-.484.032l-.378.483a.418.418 0 0 0 .036.541l1.32 1.266c.143.14.361.125.484-.033l6.272-8.048a.366.366 0 0 0-.064-.512zm-4.1 0l-.478-.372a.365.365 0 0 0-.51.063L4.566 9.879a.32.32 0 0 1-.484.033L1.891 7.769a.366.366 0 0 0-.515.006l-.423.433a.364.364 0 0 0 .006.514l3.258 3.185c.143.14.361.125.484-.033l6.272-8.048a.365.365 0 0 0-.063-.51z" fill="#53bdeb"/></svg>' : ''}
+        ${tickHtml}
     </span>`;
     
     div.innerHTML = contentHtml;
@@ -3044,4 +3057,49 @@ const handleEmojiAction = async (e) => {
 document.querySelectorAll('.reaction-emoji').forEach(el => {
     el.addEventListener('click', handleEmojiAction);
     el.addEventListener('touchstart', handleEmojiAction);
+});
+
+
+// ==========================================
+// Biometric Lock Logic
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+    const lockScreen = document.getElementById('biometric-lock-screen');
+    const btnUnlockApp = document.getElementById('btn-unlock-app');
+    const biometricContainer = document.getElementById('setting-biometric-container');
+    const biometricToggle = document.getElementById('settings-biometric-toggle');
+
+    const isBiometricEnabled = localStorage.getItem('biometric_enabled') === 'true';
+
+    window.onBiometricSuccess = () => {
+        if (lockScreen) lockScreen.style.display = 'none';
+    };
+
+    window.onBiometricFailed = () => {
+        // Keep it locked
+    };
+
+    if (window.AndroidAuth) {
+        if (biometricContainer) biometricContainer.style.display = 'flex';
+        if (biometricToggle) biometricToggle.checked = isBiometricEnabled;
+        
+        if (isBiometricEnabled && window.AndroidAuth.promptBiometric) {
+            if (lockScreen) lockScreen.style.display = 'flex';
+            window.AndroidAuth.promptBiometric();
+        }
+    }
+
+    if (btnUnlockApp) {
+        btnUnlockApp.addEventListener('click', () => {
+            if (window.AndroidAuth && window.AndroidAuth.promptBiometric) {
+                window.AndroidAuth.promptBiometric();
+            }
+        });
+    }
+
+    if (biometricToggle) {
+        biometricToggle.addEventListener('change', (e) => {
+            localStorage.setItem('biometric_enabled', e.target.checked);
+        });
+    }
 });
