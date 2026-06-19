@@ -806,6 +806,7 @@ const sendMessage = async (text = '', fileUrl = null, fileType = null) => {
         const payload = {
             chatId: activeChatId,
             senderId: currentUser.userId,
+            receiverId: activeChatUserId,
             text: text.trim(),
             fileUrl: fileUrl,
             fileType: fileType,
