@@ -137,7 +137,9 @@ if (btnDownloadLightbox) {
             console.error("Failed to download image", err);
             alert("Could not download image. It might be blocked by browser security.");
         }
-    });
+    };
+    btnDownloadLightbox.addEventListener('click', handleDownload);
+    btnDownloadLightbox.addEventListener('touchstart', handleDownload, {passive: false});
 }
 
 
