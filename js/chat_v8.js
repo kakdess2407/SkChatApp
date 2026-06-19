@@ -278,6 +278,9 @@ window.addEventListener('popstate', (e) => {
     const profileViewerOverlay = document.getElementById('profile-viewer-overlay');
     if (profileViewerOverlay && profileViewerOverlay.classList.contains('active')) {
         profileViewerOverlay.classList.remove('active');
+        profileViewerOverlay.style.opacity = '0';
+        profileViewerOverlay.style.pointerEvents = 'none';
+        setTimeout(() => profileViewerOverlay.style.display = 'none', 200);
         return;
     }
 
