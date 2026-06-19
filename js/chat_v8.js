@@ -1,6 +1,6 @@
 
 
-import { db, auth } from './firebase-config.js?v=52';
+import { db, auth } from './firebase-config.js?v=53';
 import { collection, query, where, onSnapshot, addDoc, serverTimestamp, orderBy, getDocs, getDoc, doc, deleteDoc, updateDoc, setDoc, or, deleteField } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -29,7 +29,28 @@ window.handleAvatarClick = (userId, profilePicUrl, fullName, e) => {
     
     if (window.hasActiveStatus(userId)) {
         // Open Action Modal
-        const modal = document.getElementById('avatar-action-modal');
+        let modal = document.getElementById('avatar-action-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'avatar-action-modal';
+            modal.className = 'modal-overlay';
+            modal.style.zIndex = '10006';
+            modal.style.display = 'none';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 320px; width: 85%; padding: 0; border-radius: 12px; overflow: hidden; background: var(--wa-bg-light); margin: auto;">
+                    <div style="padding: 20px; text-align: center; border-bottom: 1px solid var(--wa-border);">
+                        <img id="avatar-action-pic" src="" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin-bottom: 15px;">
+                        <h3 id="avatar-action-name" style="margin: 0; font-size: 18px; color: var(--wa-text-dark);">User Name</h3>
+                    </div>
+                    <div style="display: flex; flex-direction: column;">
+                        <button id="btn-action-view-status" style="padding: 15px; background: none; border: none; border-bottom: 1px solid var(--wa-border); font-size: 16px; color: var(--wa-green-dark); cursor: pointer; font-weight: 500; transition: background 0.2s;">View Status</button>
+                        <button id="btn-action-view-profile" style="padding: 15px; background: none; border: none; font-size: 16px; color: var(--wa-text-dark); cursor: pointer; font-weight: 500; transition: background 0.2s;">View Profile</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+        
         document.getElementById('avatar-action-pic').src = profilePicUrl || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
         document.getElementById('avatar-action-name').innerText = isMyProfile ? 'My Status' : (fullName || 'User');
         
@@ -356,7 +377,7 @@ const renderUsers = (users) => {
         div.onclick = () => selectUser(user);
         
         div.innerHTML = `
-            <img src="${user.profilePic || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" class="avatar ${window.hasActiveStatus(user.userId) ? 'status-ring' : ''}" style="cursor: pointer;" onclick="window.handleAvatarClick('${user.userId}', this.src, '${user.fullName.replace(/'/g, "\'")}', event)">
+            <img src="${user.profilePic || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" class="avatar ${window.hasActiveStatus(user.userId) ? 'status-ring' : ''}" style="cursor: pointer;" onclick="window.handleAvatarClick('${user.userId}', this.src, '${user.fullName.replace(/'/g, "\'").replace(/"/g, "&quot;")}', event)">
             <div class="chat-item-info">
                 <div class="chat-item-header">
                     <span class="chat-item-name">${user.fullName}</span>
