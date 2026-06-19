@@ -118,6 +118,7 @@ if (btnDownloadLightbox) {
             const url = lightboxImg.src;
             const filename = `SkChat_Image_${Date.now()}.jpg`;
             if (window.AndroidAuth && window.AndroidAuth.downloadImage) {
+                alert("Triggering native download to Android Downloads folder...");
                 window.AndroidAuth.downloadImage(url, filename);
             } else {
                 // Fallback for Web browser
