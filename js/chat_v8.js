@@ -1,5 +1,4 @@
-import { db, auth, storage } from './firebase-config.js?v=5';
-import { ref as storageRef, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+import { db, auth } from './firebase-config.js?v=5';
 import { collection, query, where, onSnapshot, addDoc, serverTimestamp, orderBy, getDocs, getDoc, doc, deleteDoc, updateDoc, setDoc, or, deleteField } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -3379,15 +3378,10 @@ if (statusFileInput) {
         
         statusPlaceholder.style.display = 'none';
         
-        if (file.type.startsWith('video/')) {
-            statusImgPreview.style.display = 'none';
-            statusVideoPreview.src = URL.createObjectURL(file);
-            statusVideoPreview.style.display = 'block';
-        } else {
-            statusVideoPreview.style.display = 'none';
-            statusImgPreview.src = URL.createObjectURL(file);
-            statusImgPreview.style.display = 'block';
-        }
+        statusImgPreview.src = URL.createObjectURL(file);
+        statusImgPreview.style.display = 'block';
+        const captionBar = document.getElementById('status-caption-bar');
+        if (captionBar) captionBar.style.display = 'flex';
     });
 }
 if (btnCloseStatusUpload) {
@@ -3396,20 +3390,28 @@ if (btnCloseStatusUpload) {
         statusSelectedFile = null;
         statusPlaceholder.style.display = 'block';
         statusImgPreview.style.display = 'none';
-        statusVideoPreview.style.display = 'none';
         statusCaptionInput.value = '';
+        const captionBar = document.getElementById('status-caption-bar');
+        if (captionBar) captionBar.style.display = 'none';
     };
 }
 
-// Upload Media
-const uploadMediaToFirebase = async (file) => {
-    const ext = file.name.split('.').pop();
-    const fileName = `status_${currentUser.userId}_${Date.now()}.${ext}`;
-    const fileRef = storageRef(storage, `statuses/${fileName}`);
+// Upload Photo to ImgBB
+const uploadStatusImage = async (file) => {
+    const formData = new FormData();
+    formData.append('image', file);
     
-    const uploadTask = await uploadBytesResumable(fileRef, file);
-    const downloadURL = await getDownloadURL(uploadTask.ref);
-    return downloadURL;
+    const response = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+        method: 'POST',
+        body: formData
+    });
+    
+    const data = await response.json();
+    if (data.success) {
+        return data.data.url;
+    } else {
+        throw new Error('ImgBB Upload Failed: ' + (data.error ? data.error.message : 'Unknown'));
+    }
 };
 
 if (btnSendStatus) {
@@ -3417,16 +3419,16 @@ if (btnSendStatus) {
         if (!statusSelectedFile) return alert('Please select an image or video');
         
         btnSendStatus.disabled = true;
-        btnSendStatus.innerText = 'Sending...';
+        btnSendStatus.innerHTML = '<span class="spinner" style="border-width: 2px; width: 20px; height: 20px;"></span>';
         
         try {
-            const mediaUrl = await uploadMediaToFirebase(statusSelectedFile);
+            const mediaUrl = await uploadStatusImage(statusSelectedFile);
             
             await addDoc(collection(db, 'statuses'), {
                 userId: currentUser.userId,
                 mediaUrl: mediaUrl,
-                mediaType: statusSelectedFile.type.startsWith('video/') ? 'video' : 'image',
-                caption: statusCaptionInput.value.trim(),
+                mediaType: 'image',
+                caption: statusCaptionInput.value ? statusCaptionInput.value.trim() : '',
                 createdAt: serverTimestamp(),
                 viewers: []
             });
@@ -3437,7 +3439,7 @@ if (btnSendStatus) {
             alert('Failed to upload status: ' + e.message);
         } finally {
             btnSendStatus.disabled = false;
-            btnSendStatus.innerText = 'Send Status';
+            btnSendStatus.innerHTML = '<svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" style="margin-left: 2px;"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>';
         }
     };
 }
