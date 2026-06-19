@@ -3118,3 +3118,21 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+// Biometric App Lock Handlers
+window.showLockScreen = () => {
+    if (localStorage.getItem('biometric_enabled') === 'true') {
+        const lockScreen = document.getElementById('biometric-lock-screen');
+        if (lockScreen) lockScreen.style.display = 'flex';
+    }
+};
+
+window.promptBiometricIfLocked = () => {
+    if (localStorage.getItem('biometric_enabled') === 'true') {
+        const lockScreen = document.getElementById('biometric-lock-screen');
+        if (lockScreen && window.AndroidAuth && window.AndroidAuth.promptBiometric) {
+            lockScreen.style.display = 'flex';
+            window.AndroidAuth.promptBiometric();
+        }
+    }
+};
