@@ -2634,16 +2634,25 @@ if (navTabs) {
             tab.classList.add('active');
             
             const target = tab.getAttribute('data-target');
-            if (target === 'sidebar-chats') {
-                if(sidebarChats) sidebarChats.style.display = 'block';
-                if(sidebarCalls) sidebarCalls.style.display = 'none';
-            } else {
-                if(sidebarChats) sidebarChats.style.display = 'none';
-                if(sidebarCalls) {
-                    sidebarCalls.style.display = 'block';
-                    fetchCallHistory();
-                }
+            const targetEl = document.getElementById(target);
+            const sidebars = [document.getElementById('sidebar-chats'), document.getElementById('sidebar-calls'), document.getElementById('sidebar-status')];
+            sidebars.forEach(s => { if (s) s.style.display = 'none'; });
+            
+            if (targetEl) targetEl.style.display = 'flex';
+            if (target === 'sidebar-chats' && targetEl) targetEl.style.display = 'block';
+            
+            if (target === 'sidebar-calls') {
+                fetchCallHistory();
             }
+            
+            // Sync active state across desktop and mobile navs
+            navTabs.forEach(t => {
+                if (t.getAttribute('data-target') === target) {
+                    t.classList.add('active');
+                } else {
+                    t.classList.remove('active');
+                }
+            });
         });
     });
 }
