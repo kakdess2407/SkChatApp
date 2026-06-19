@@ -1,6 +1,6 @@
 
 
-import { db, auth } from './firebase-config.js?v=54';
+import { db, auth } from './firebase-config.js?v=55';
 import { collection, query, where, onSnapshot, addDoc, serverTimestamp, orderBy, getDocs, getDoc, doc, deleteDoc, updateDoc, setDoc, or, deleteField } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -22,11 +22,22 @@ window.hasActiveStatus = (userId) => {
     return window.globalGroupedStatuses[userId] && window.globalGroupedStatuses[userId].length > 0;
 };
 
-window.handleAvatarClick = (userId, profilePicUrl, fullName, e) => {
+window.handleAvatarClick = (userId, e) => {
     try {
         if (e && e.stopPropagation) e.stopPropagation();
         
         const isMyProfile = currentUser && userId === currentUser.userId;
+        const userObj = (typeof allUsers !== 'undefined' ? allUsers.find(u => u.userId === userId) : null) || {};
+        let profilePicUrl = userObj.profilePic;
+        let fullName = userObj.fullName;
+        
+        if (isMyProfile) {
+            profilePicUrl = currentUser.profilePic;
+            fullName = currentUser.fullName;
+        }
+        
+        profilePicUrl = profilePicUrl || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+        fullName = fullName || 'User';
         
         if (window.hasActiveStatus(userId)) {
             // Open Action Modal
@@ -700,7 +711,7 @@ const selectUser = (user) => {
     }
     
     // Bind click to the new handleAvatarClick
-    activeUserPic.onclick = (e) => window.handleAvatarClick(user.userId, activeUserPic.src, user.fullName, e);
+    activeUserPic.onclick = (e) => window.handleAvatarClick(user.userId, e);
     }
     
     // Mobile transition (evaluated dynamically)
