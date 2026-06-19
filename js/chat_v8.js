@@ -358,6 +358,23 @@ if (currentUser && chatList) {
 
 // Listen to chats collection for the current user to get last message previews and unhide removed chats on new messages
 if (currentUser) {
+    // Global listener to mark incoming 'sent' messages as 'delivered' when app is open
+    const qIncomingMessages = query(
+        collection(db, "messages"),
+        where("receiverId", "==", currentUser.userId),
+        where("status", "==", "sent")
+    );
+    onSnapshot(qIncomingMessages, (snapshot) => {
+        snapshot.forEach((docSnap) => {
+            // Only update to delivered if the chat is not currently open
+            // If it is open, the currentMessagesUnsubscribe will mark it as read
+            const m = docSnap.data();
+            if (activeChatId !== m.chatId) {
+                updateDoc(docSnap.ref, { status: 'delivered' }).catch(console.error);
+            }
+        });
+    });
+
     const qChats = query(
         collection(db, "chats"),
         where("participants", "array-contains", currentUser.userId)
@@ -631,10 +648,15 @@ const loadMessages = () => {
         chatMessagesContainer.innerHTML = '';
         
         const messages = [];
-        snapshot.forEach((doc) => {
-            let m = doc.data();
-            m.id = doc.id;
+        snapshot.forEach((docSnap) => {
+            let m = docSnap.data();
+            m.id = docSnap.id;
             messages.push(m);
+            
+            // Mark as read if received by me and currently not read
+            if (m.receiverId === currentUser.userId && m.status !== 'read') {
+                updateDoc(docSnap.ref, { status: 'read' }).catch(console.error);
+            }
         });
         
         // Sort messages locally by timestamp
@@ -779,6 +801,7 @@ const sendMessage = async (text = '', fileUrl = null, fileType = null) => {
         if (replyToMessage) {
             payload.replyTo = replyToMessage;
         }
+        payload.status = 'sent';
         await addDoc(collection(db, "messages"), payload);
         
         if (typeof btnCancelReply !== 'undefined' && btnCancelReply) btnCancelReply.click();

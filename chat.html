@@ -7,6 +7,12 @@
     <link rel="stylesheet" href="css/style.css?v=4">
     <link rel="stylesheet" href="css/chat.css?v=21">
     <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        #settings-biometric-toggle:checked + .slider { background-color: var(--wa-green-light); }
+        #settings-biometric-toggle:checked + .slider .slider-knob { transform: translateX(20px); }
+    </style>
+
 </head>
 <body>
     <script src="js/access-gate.js"></script>
@@ -219,6 +225,18 @@
                 </div>
 
                 <!-- Double-OTP Change Phone Container -->
+                
+                <!-- Fingerprint Lock Setting -->
+                <div id="setting-biometric-container" style="display: none; margin-top: 15px; padding: 10px 0; border-top: 1px solid var(--wa-border); align-items: center; justify-content: space-between;">
+                    <span style="font-size: 14px; font-weight: 500; color: var(--wa-text-dark);">Fingerprint Lock</span>
+                    <label style="position: relative; display: inline-block; width: 40px; height: 20px;">
+                        <input type="checkbox" id="settings-biometric-toggle" style="opacity: 0; width: 0; height: 0;">
+                        <span class="slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 20px;">
+                            <span class="slider-knob" style="position: absolute; height: 16px; width: 16px; left: 2px; bottom: 2px; background-color: white; transition: .4s; border-radius: 50%;"></span>
+                        </span>
+                    </label>
+                </div>
+
                 <div id="change-phone-container" style="display: none; border: 1px dashed var(--wa-green-light); padding: 12px; border-radius: 6px; background-color: #f6fdfa; margin-bottom: 15px; animation: fadeIn 0.2s ease;">
                     <h4 style="margin: 0 0 8px 0; font-size: 13px; font-weight: 600; color: var(--wa-green-dark);">Change Phone Number</h4>
                     
@@ -359,7 +377,21 @@
         </div>
     </div>
 
+    
+    <!-- Biometric Lock Screen Overlay -->
+    <div id="biometric-lock-screen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--wa-bg-light); z-index: 100000; align-items: center; justify-content: center; flex-direction: column;">
+        <div style="background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; max-width: 80%;">
+            <svg viewBox="0 0 24 24" width="64" height="64" fill="none" stroke="var(--wa-green-light)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 20px;">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            <h2 style="margin-bottom: 10px; color: var(--wa-text-dark);">SkChat Locked</h2>
+            <p style="color: var(--wa-text-light); margin-bottom: 30px; font-size: 14px;">Please authenticate to continue</p>
+            <button id="btn-unlock-app" class="btn-primary" style="padding: 12px 24px; border-radius: 24px; font-size: 16px; width: 100%;">Unlock</button>
+        </div>
+    </div>
+
     <!-- Firebase SDK will be loaded in chat.js -->
-    <script type="module" src="js/chat_v8.js?v=36"></script>
+    <script type="module" src="js/chat_v8.js?v=37"></script>
 </body>
 </html>
