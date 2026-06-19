@@ -1,4 +1,16 @@
 
+
+import { db, auth } from './firebase-config.js?v=52';
+import { collection, query, where, onSnapshot, addDoc, serverTimestamp, orderBy, getDocs, getDoc, doc, deleteDoc, updateDoc, setDoc, or, deleteField } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+// Check Auth
+const currentUserRaw = localStorage.getItem('currentUser');
+if (!currentUserRaw && window.location.pathname.includes('chat.html')) {
+    window.location.href = 'index.html';
+}
+const currentUser = JSON.parse(currentUserRaw);
+
 // Global Status State
 window.globalGroupedStatuses = {};
 window.globalMyStatuses = [];
@@ -47,17 +59,6 @@ window.handleAvatarClick = (userId, profilePicUrl, fullName, e) => {
         if(window.openProfileViewer) window.openProfileViewer(profilePicUrl, isMyProfile);
     }
 };
-
-import { db, auth } from './firebase-config.js?v=5';
-import { collection, query, where, onSnapshot, addDoc, serverTimestamp, orderBy, getDocs, getDoc, doc, deleteDoc, updateDoc, setDoc, or, deleteField } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-
-// Check Auth
-const currentUserRaw = localStorage.getItem('currentUser');
-if (!currentUserRaw && window.location.pathname.includes('chat.html')) {
-    window.location.href = 'index.html';
-}
-const currentUser = JSON.parse(currentUserRaw);
 
 if (currentUser && window.AndroidAuth) {
     window.AndroidAuth.startCallListener(currentUser.userId);
