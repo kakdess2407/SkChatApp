@@ -1,6 +1,6 @@
 
 
-import { db, auth } from './firebase-config.js?v=62';
+import { db, auth } from './firebase-config.js?v=63';
 import { collection, query, where, onSnapshot, addDoc, serverTimestamp, orderBy, getDocs, getDoc, doc, deleteDoc, updateDoc, setDoc, or, deleteField } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -3397,7 +3397,17 @@ if (myStatusPic && currentUser) {
 
 // Check if user is connected
 const isUserConnected = (otherUserId) => {
-    return true; // Bypass undefined getChatId crash
+    if (!currentUser) return false;
+    if (otherUserId === currentUser.userId) return true; // Self is always connected
+    const chatId = getChatId(currentUser.userId, otherUserId);
+    if (!userChats || !userChats.has(chatId)) return false;
+    const chatData = userChats.get(chatId);
+    
+    // Check if blocked by ANYONE (either A blocked B, or B blocked A)
+    if (chatData.blockedBy && chatData.blockedBy.length > 0) return false;
+    if (chatData.connectionStatus === 'rejected') return false;
+    
+    return true;
 };
 
 // Fetch statuses in real-time
@@ -3419,7 +3429,10 @@ onSnapshot(statusesQuery, (snapshot) => {
         const createdAt = data.createdAt ? data.createdAt.toDate() : now;
         const diffHours = (now - createdAt) / (1000 * 60 * 60);
         
-        if (diffHours < 12 && isUserConnected(data.userId)) {
+        if (diffHours >= 12 && data.userId === currentUser.userId) {
+            // Automatically delete my expired statuses
+            deleteDoc(doc(db, 'statuses', data.id)).catch(e => console.error("Could not delete status:", e));
+        } else if (diffHours < 12 && isUserConnected(data.userId)) {
             allStatuses.push(data);
         }
     });
