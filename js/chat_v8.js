@@ -1,6 +1,6 @@
 
 
-import { db, auth } from './firebase-config.js?v=63';
+import { db, auth } from './firebase-config.js?v=64';
 import { collection, query, where, onSnapshot, addDoc, serverTimestamp, orderBy, getDocs, getDoc, doc, deleteDoc, updateDoc, setDoc, or, deleteField } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -3439,6 +3439,28 @@ onSnapshot(statusesQuery, (snapshot) => {
     
     renderStatusList();
 });
+
+// Periodic cleanup of expired statuses while app is open
+setInterval(() => {
+    if (!currentUser) return;
+    let changed = false;
+    const now = new Date();
+    allStatuses = allStatuses.filter(status => {
+        const createdAt = status.createdAt ? status.createdAt.toDate() : now;
+        const diffHours = (now - createdAt) / (1000 * 60 * 60);
+        if (diffHours >= 12) {
+            changed = true;
+            if (status.userId === currentUser.userId) {
+                deleteDoc(doc(db, 'statuses', status.id)).catch(e => console.error("Could auto-delete status:", e));
+            }
+            return false;
+        }
+        return true;
+    });
+    if (changed) {
+        renderStatusList();
+    }
+}, 60000); // Check every 1 minute
 
 const renderStatusList = () => {
     if (!statusList) return;
